@@ -1,28 +1,42 @@
 import { useState, useEffect, useCallback } from 'react'
 import './App.css'
 
-import Header               from './components/Header'
-import Tabs                 from './components/Tabs'
-import Footer               from './components/Footer'
-import Workflow             from './components/Workflow'
-import Schematic            from './components/Schematic'
-import Layout               from './components/Layout'
-import ShortcutSearch       from './components/ShortcutSearch'
-import Rules                from './components/Rules'
-import Export               from './components/Export'
-import InteractiveChecklist from './components/InteractiveChecklist'
-import TraceCalculator      from './components/TraceCalculator'
-import ImpedanceCalculator  from './components/ImpedanceCalculator'
-import CostEstimator        from './components/CostEstimator'
-import DesignTools          from './components/DesignTools'
-import Resources            from './components/Resources'
+import Header                from './components/Header'
+import Tabs                  from './components/Tabs'
+import Footer                from './components/Footer'
+import PCBFundamentals       from './components/PCBFundamentals'
+import ComponentEncyclopedia from './components/ComponentEncyclopedia'
+import CommonMistakes        from './components/CommonMistakes'
+import BeginnerGuides        from './components/BeginnerGuides'
+import Workflow              from './components/Workflow'
+import Schematic             from './components/Schematic'
+import Layout                from './components/Layout'
+import ShortcutSearch        from './components/ShortcutSearch'
+import Rules                 from './components/Rules'
+import Export                from './components/Export'
+import InteractiveChecklist  from './components/InteractiveChecklist'
+import TraceCalculator       from './components/TraceCalculator'
+import ImpedanceCalculator   from './components/ImpedanceCalculator'
+import CostEstimator         from './components/CostEstimator'
+import DesignTools           from './components/DesignTools'
+import Resources             from './components/Resources'
 
 const TAB_IDS = [
-  'workflow', 'schematic', 'layout', 'shortcuts', 'rules',
-  'export', 'checklist', 'calculators', 'impedance', 'cost', 'designtools', 'resources',
+  // Beginner track
+  'start', 'components', 'mistakes', 'guides',
+  // Workflow track
+  'workflow', 'schematic', 'layout', 'shortcuts', 'rules', 'export',
+  // Tools track
+  'checklist', 'calculators', 'impedance', 'cost', 'designtools',
+  // Reference
+  'resources',
 ]
 
 const SECTIONS = {
+  start:       <PCBFundamentals />,
+  components:  <ComponentEncyclopedia />,
+  mistakes:    <CommonMistakes />,
+  guides:      <BeginnerGuides />,
   workflow:    <Workflow />,
   schematic:   <Schematic />,
   layout:      <Layout />,
@@ -39,7 +53,7 @@ const SECTIONS = {
 
 function getInitialTab() {
   const hash = window.location.hash.replace('#', '')
-  return TAB_IDS.includes(hash) ? hash : 'workflow'
+  return TAB_IDS.includes(hash) ? hash : 'start'
 }
 
 function applyTheme(dark) {
