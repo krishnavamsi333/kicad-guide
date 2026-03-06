@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 const ALL_SHORTCUTS = [
   { key: 'A',            desc: 'Add component/symbol',            editor: 'Schematic' },
@@ -52,21 +52,25 @@ const EDITOR_COLORS = {
 
 function CopyButton({ text }) {
   const [copied, setCopied] = useState(false)
-  const handleCopy = (e) => {
-    e.stopPropagation()
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    })
-  }
   return (
-    <button onClick={handleCopy} title="Copy shortcut" style={{
-      fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '1px',
-      padding: '3px 8px', border: `1px solid ${copied ? 'var(--accent3)' : 'var(--border)'}`,
-      background: copied ? 'var(--accent3)22' : 'transparent',
-      color: copied ? 'var(--accent3)' : 'var(--text-dim)',
-      cursor: 'pointer', borderRadius: '2px', transition: 'all 0.15s', flexShrink: 0,
-    }}>
+    <button
+      onClick={e => {
+        e.stopPropagation()
+        navigator.clipboard?.writeText(text).then(() => {
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1500)
+        })
+      }}
+      title="Copy shortcut"
+      style={{
+        fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '1px',
+        padding: '3px 8px', border: `1px solid ${copied ? 'var(--accent3)' : 'var(--border)'}`,
+        background: copied ? 'rgba(57,255,20,0.12)' : 'transparent',
+        color: copied ? 'var(--accent3)' : 'var(--text-dim)',
+        cursor: 'pointer', borderRadius: '2px',
+        transition: 'all 0.15s', flexShrink: 0,
+      }}
+    >
       {copied ? '✓' : '⎘'}
     </button>
   )
@@ -75,54 +79,141 @@ function CopyButton({ text }) {
 export default function ShortcutSearch() {
   const [query, setQuery]   = useState('')
   const [filter, setFilter] = useState('All')
+  const inputRef = useRef(null)
+
+  // Press / or Ctrl+F to focus search when not already in an input
+  useEffect(() => {
+    const handler = (e) => {
+      if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return
+      if (e.key === '/' || (e.ctrlKey && e.key === 'f')) {
+        e.preventDefault()
+        inputRef.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   const filtered = ALL_SHORTCUTS.filter(s => {
     const matchEditor = filter === 'All' || s.editor === filter
     const q = query.toLowerCase()
-    const matchQuery = !q || s.key.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q)
-    return matchEditor && matchQuery
+    return matchEditor && (!q || s.key.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q))
   })
 
   return (
     <div className="fade-in">
       <div className="section-title">Shortcut Search</div>
-      <p className="section-desc">Search by action or key name. Click ⎘ to copy any shortcut to clipboard.</p>
+      <p className="section-desc">
+        Search by action or key name. Click ⎘ to copy. Press{' '}
+        <code>/</code> anywhere to focus the search box.
+      </p>
 
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+      {/* Search + filter row */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        {/* Search input */}
         <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
-          <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--mono)', fontSize: '14px', color: 'var(--text-dim)' }}>⌕</span>
-          <input type="text" placeholder="Search... e.g. rotate, fill, via, zone"
-            value={query} onChange={e => setQuery(e.target.value)}
+          <span style={{
+            position: 'absolute', left: '13px', top: '50%',
+            transform: 'translateY(-50%)',
+            fontFamily: 'var(--mono)', fontSize: '14px', color: 'var(--text-dim)',
+            pointerEvents: 'none',
+          }}>⌕</span>
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Search… rotate, fill, via, route…"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
             style={{
-              width: '100%', background: 'var(--panel)', border: '1px solid var(--border)',
-              borderRadius: '2px', padding: '12px 16px 12px 38px',
-              fontFamily: 'var(--mono)', fontSize: '13px', color: 'var(--text)', outline: 'none', transition: 'border-color 0.15s',
+              width: '100%',
+              background: 'var(--panel)',
+              border: '1px solid var(--border)',
+              borderRadius: '3px',
+              padding: '11px 16px 11px 36px',
+              fontFamily: 'var(--mono)',
+              fontSize: '13px',
+              color: 'var(--text)',
+              outline: 'none',
+              transition: 'border-color 0.15s',
             }}
             onFocus={e => e.target.style.borderColor = 'var(--accent)'}
             onBlur={e => e.target.style.borderColor = 'var(--border)'}
           />
+          {/* Clear button */}
+          {query && (
+            <button
+              onClick={() => { setQuery(''); inputRef.current?.focus() }}
+              style={{
+                position: 'absolute', right: '10px', top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--text-dim)', fontSize: '14px', padding: '2px',
+              }}
+            >×</button>
+          )}
         </div>
+
+        {/* Filter chips */}
         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
           {['All', 'Schematic', 'PCB', 'Universal'].map(f => (
-            <button key={f} onClick={() => setFilter(f)} style={{
-              fontFamily: 'var(--mono)', fontSize: '10px', letterSpacing: '1.5px', textTransform: 'uppercase',
-              padding: '10px 16px',
-              border: `1px solid ${filter === f ? (EDITOR_COLORS[f] || 'var(--accent)') : 'var(--border)'}`,
-              background: filter === f ? (EDITOR_COLORS[f] || 'var(--accent)') + '22' : 'var(--panel)',
-              color: filter === f ? (EDITOR_COLORS[f] || 'var(--accent)') : 'var(--text-dim)',
-              cursor: 'pointer', borderRadius: '2px', transition: 'all 0.15s',
-            }}>{f}</button>
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              style={{
+                fontFamily: 'var(--mono)', fontSize: '10px', letterSpacing: '1.5px',
+                textTransform: 'uppercase', padding: '10px 15px',
+                border: `1px solid ${filter === f ? (EDITOR_COLORS[f] || 'var(--accent)') : 'var(--border)'}`,
+                background: filter === f ? `color-mix(in srgb, ${EDITOR_COLORS[f] || 'var(--accent)'} 12%, var(--panel))` : 'var(--panel)',
+                color: filter === f ? (EDITOR_COLORS[f] || 'var(--accent)') : 'var(--text-dim)',
+                cursor: 'pointer', borderRadius: '3px', transition: 'all 0.15s',
+                whiteSpace: 'nowrap',
+              }}
+            >{f}</button>
           ))}
         </div>
       </div>
 
-      <div style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--text-dim)', letterSpacing: '1px', marginBottom: '16px' }}>
-        {filtered.length} SHORTCUT{filtered.length !== 1 ? 'S' : ''} FOUND
+      {/* Result count */}
+      <div style={{
+        fontFamily: 'var(--mono)', fontSize: '11px',
+        color: 'var(--text-dim)', letterSpacing: '1px',
+        marginBottom: '14px',
+        display: 'flex', alignItems: 'center', gap: '8px',
+      }}>
+        <span style={{
+          background: 'var(--panel)',
+          border: '1px solid var(--border)',
+          borderRadius: '20px',
+          padding: '2px 10px',
+          color: filtered.length > 0 ? 'var(--accent)' : 'var(--red)',
+          fontSize: '11px',
+        }}>
+          {filtered.length}
+        </span>
+        shortcut{filtered.length !== 1 ? 's' : ''} found
+        {query && <span style={{ color: 'var(--text-dim)' }}>for "<span style={{ color: 'var(--text)' }}>{query}</span>"</span>}
       </div>
 
+      {/* Empty state */}
       {filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-dim)', fontFamily: 'var(--mono)', fontSize: '13px' }}>
-          No shortcuts match "{query}"
+        <div style={{
+          textAlign: 'center', padding: '56px 24px',
+          color: 'var(--text-dim)', fontFamily: 'var(--mono)', fontSize: '13px',
+          background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '4px',
+        }}>
+          <div style={{ fontSize: '28px', marginBottom: '12px', opacity: 0.4 }}>⌕</div>
+          No shortcuts match "<span style={{ color: 'var(--text)' }}>{query}</span>"
+          <br />
+          <button
+            onClick={() => setQuery('')}
+            style={{
+              marginTop: '14px', fontFamily: 'var(--mono)', fontSize: '10px',
+              letterSpacing: '1.5px', textTransform: 'uppercase',
+              padding: '7px 16px', border: '1px solid var(--border)',
+              background: 'var(--bg3)', color: 'var(--text-dim)',
+              cursor: 'pointer', borderRadius: '2px',
+            }}
+          >Clear search</button>
         </div>
       ) : (
         <div className="shortcut-grid">
@@ -130,7 +221,12 @@ export default function ShortcutSearch() {
             <div className="shortcut-item" key={i}>
               <span className="key">{s.key}</span>
               <span className="key-desc" style={{ flex: 1 }}>{s.desc}</span>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '1px', textTransform: 'uppercase', color: EDITOR_COLORS[s.editor], flexShrink: 0, marginRight: '8px' }}>
+              <span style={{
+                fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '1px',
+                textTransform: 'uppercase',
+                color: EDITOR_COLORS[s.editor],
+                flexShrink: 0, marginRight: '6px',
+              }}>
                 {s.editor === 'Universal' ? 'Both' : s.editor}
               </span>
               <CopyButton text={s.key} />

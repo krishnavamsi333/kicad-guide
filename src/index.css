@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700;900&family=Barlow+Condensed:wght@700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;500;600;700;900&family=Barlow+Condensed:wght@700;900&display=swap');
 
 /* ─── DARK THEME (default) ─────────────────────────────────────── */
 :root {
@@ -21,7 +21,6 @@
   --sans:  'Barlow', sans-serif;
   --cond:  'Barlow Condensed', sans-serif;
 
-  /* Hover/interactive colors — dark theme */
   --hover-bg:        rgba(0,229,255,0.06);
   --hover-border:    rgba(0,229,255,0.35);
   --hover-text:      #c8dde3;
@@ -29,9 +28,14 @@
   --check-done-border: rgba(57,255,20,0.18);
   --ink-glow:        rgba(0,229,255,0.6);
   --tab-active-bg:   rgba(0,229,255,0.04);
-
-  /* Grid overlay opacity */
   --grid-opacity: 0.018;
+
+  /* NEW: consistent shadow + focus tokens */
+  --shadow-card: 0 4px 24px rgba(0,0,0,0.45);
+  --shadow-hover: 0 8px 36px rgba(0,0,0,0.6);
+  --focus-ring: 0 0 0 2px var(--accent);
+  --radius: 4px;
+  --transition: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ─── LIGHT THEME ───────────────────────────────────────────────── */
@@ -43,16 +47,15 @@
   --panel2:      #eef3f5;
   --border:      #c0d3da;
   --border2:     #a8c2cb;
-  --accent:      #0097b2;   /* darkened cyan — readable on light bg */
-  --accent2:     #d44e1a;   /* darkened orange */
-  --accent3:     #1f8f00;   /* darkened green */
-  --accent4:     #a07800;   /* darkened yellow */
+  --accent:      #0097b2;
+  --accent2:     #d44e1a;
+  --accent3:     #1f8f00;
+  --accent4:     #a07800;
   --text:        #1c3a45;
   --text-dim:    #6a8f9a;
   --text-bright: #0a1f28;
   --red:         #cc1f3a;
 
-  /* Hover/interactive colors — light theme */
   --hover-bg:        rgba(0,151,178,0.08);
   --hover-border:    rgba(0,151,178,0.5);
   --hover-text:      #0a2530;
@@ -60,8 +63,10 @@
   --check-done-border: rgba(31,143,0,0.25);
   --ink-glow:        rgba(0,151,178,0.4);
   --tab-active-bg:   rgba(0,151,178,0.07);
-
   --grid-opacity: 0.06;
+
+  --shadow-card:  0 2px 12px rgba(0,0,0,0.1);
+  --shadow-hover: 0 6px 24px rgba(0,0,0,0.15);
 }
 
 /* ─── RESET ─────────────────────────────────────────────────────── */
@@ -73,7 +78,6 @@
 
 html {
   scroll-behavior: smooth;
-  /* Crisp pixel rendering — fixes blur on non-retina / scaled displays */
   -webkit-text-size-adjust: 100%;
   text-rendering: optimizeLegibility;
 }
@@ -82,12 +86,12 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.6;
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Force sub-pixel rendering OFF — prevents blurry 1px borders */
-  transform: translateZ(0);
 }
 
 /* ─── PCB GRID ATMOSPHERE ────────────────────────────────────────── */
@@ -121,7 +125,7 @@ body::after {
 
 /* ─── ANIMATIONS ─────────────────────────────────────────────────── */
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes fadeIn {
@@ -132,10 +136,18 @@ body::after {
   0%, 100% { box-shadow: 0 0 8px rgba(0,229,255,0.3); }
   50%       { box-shadow: 0 0 20px rgba(0,229,255,0.6), 0 0 40px rgba(0,229,255,0.2); }
 }
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
 
-.fade-in { animation: fadeUp 0.35s cubic-bezier(0.22,1,0.36,1) both; }
+.fade-in { animation: fadeUp 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
-/* ─── RANGE INPUT — crisp across themes ──────────────────────────── */
+/* ─── RANGE INPUT ─────────────────────────────────────────────────── */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
@@ -144,33 +156,32 @@ input[type="range"] {
   background: var(--bg3);
   outline: none;
   cursor: pointer;
-  /* Sharp pixel rendering for track */
-  image-rendering: pixelated;
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 2px;   /* square-ish thumb — matches PCB aesthetic */
+  width: 14px; height: 14px;
+  border-radius: 3px;
   background: var(--accent);
   border: 2px solid var(--bg);
   box-shadow: 0 0 6px var(--ink-glow);
   cursor: pointer;
+  transition: transform 0.15s;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
 }
 input[type="range"]::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 2px;
+  width: 14px; height: 14px;
+  border-radius: 3px;
   background: var(--accent);
   border: 2px solid var(--bg);
-  box-shadow: 0 0 6px var(--ink-glow);
   cursor: pointer;
 }
-input[type="range"]::-webkit-slider-runnable-track {
-  background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--val, 50%), var(--bg3) var(--val, 50%));
-  border-radius: 2px;
-  height: 4px;
+
+/* ─── FOCUS STYLES ────────────────────────────────────────────────── */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 /* ─── SCROLLBAR ───────────────────────────────────────────────────── */
@@ -185,7 +196,7 @@ input[type="range"]::-webkit-slider-runnable-track {
   color: var(--bg);
 }
 
-/* ─── UTILITY / SHARED COMPONENT STYLES ──────────────────────────── */
+/* ─── UTILITY / SHARED ────────────────────────────────────────────── */
 .wrapper {
   position: relative;
   z-index: 1;
@@ -208,13 +219,13 @@ input[type="range"]::-webkit-slider-runnable-track {
   font-size: 13px;
   color: var(--text-dim);
   margin-bottom: 28px;
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
 .sub-header {
   font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 2px;
+  font-size: 10px;
+  letter-spacing: 2.5px;
   text-transform: uppercase;
   color: var(--accent);
   margin-bottom: 14px;
@@ -223,19 +234,45 @@ input[type="range"]::-webkit-slider-runnable-track {
 }
 
 .callout {
-  border-radius: 2px;
-  padding: 14px 18px;
+  border-radius: var(--radius);
+  padding: 14px 18px 14px 46px;
   font-size: 13px;
   line-height: 1.7;
   border-left: 3px solid;
+  margin-bottom: 12px;
+  position: relative;
+  transition: border-color var(--transition), background var(--transition);
 }
-.callout.tip {
-  background: color-mix(in srgb, var(--accent) 6%, var(--panel));
-  border-color: var(--accent);
-  color: var(--text);
+.callout::before { position: absolute; left: 14px; top: 13px; font-size: 15px; }
+.callout.tip    { background: color-mix(in srgb, var(--accent)  6%, var(--panel)); border-color: var(--accent);  }
+.callout.tip::before    { content: '💡'; }
+.callout.warn   { background: color-mix(in srgb, var(--accent4) 6%, var(--panel)); border-color: var(--accent4); }
+.callout.warn::before   { content: '⚠️'; }
+.callout.danger { background: color-mix(in srgb, var(--red)     6%, var(--panel)); border-color: var(--red);    }
+.callout.danger::before { content: '🚫'; }
+.callout.good   { background: color-mix(in srgb, var(--accent3) 6%, var(--panel)); border-color: var(--accent3);}
+.callout.good::before   { content: '✅'; }
+.callout:hover  { filter: brightness(1.06); }
+
+/* ─── CODE INLINE ─────────────────────────────────────────────────── */
+code {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(0,229,255,0.07);
+  padding: 2px 6px;
+  border-radius: 2px;
+  border: 1px solid rgba(0,229,255,0.12);
 }
-.callout.warn {
-  background: color-mix(in srgb, var(--accent4) 6%, var(--panel));
-  border-color: var(--accent4);
-  color: var(--text);
+[data-theme="light"] code {
+  background: rgba(0,151,178,0.08);
+  border-color: rgba(0,151,178,0.18);
+}
+
+/* ─── PRINT ──────────────────────────────────────────────────────── */
+@media print {
+  body::before, body::after { display: none; }
+  .wrapper { max-width: 100%; padding: 0; }
+  header, footer, .tabs-wrap { display: none; }
+  .callout, .card { break-inside: avoid; }
 }
