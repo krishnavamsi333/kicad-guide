@@ -9,6 +9,9 @@ const TABS = [
   { id: 'export',      label: 'Export & Fab',  icon: '⬆' },
   { id: 'checklist',   label: 'Checklist',     icon: '✓' },
   { id: 'calculators', label: 'Calculators',   icon: '⚡' },
+  { id: 'impedance',   label: 'Impedance',     icon: '∿' },
+  { id: 'cost',        label: 'Cost Est.',     icon: '$' },
+  { id: 'designtools', label: 'Design Tools',  icon: '⌬' },
   { id: 'resources',   label: 'Resources',     icon: '◉' },
 ]
 

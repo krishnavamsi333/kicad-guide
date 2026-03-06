@@ -12,11 +12,14 @@ import Rules                from './components/Rules'
 import Export               from './components/Export'
 import InteractiveChecklist from './components/InteractiveChecklist'
 import TraceCalculator      from './components/TraceCalculator'
+import ImpedanceCalculator  from './components/ImpedanceCalculator'
+import CostEstimator        from './components/CostEstimator'
+import DesignTools          from './components/DesignTools'
 import Resources            from './components/Resources'
 
 const TAB_IDS = [
-  'workflow', 'schematic', 'layout', 'shortcuts',
-  'rules', 'export', 'checklist', 'calculators', 'resources',
+  'workflow', 'schematic', 'layout', 'shortcuts', 'rules',
+  'export', 'checklist', 'calculators', 'impedance', 'cost', 'designtools', 'resources',
 ]
 
 const SECTIONS = {
@@ -28,6 +31,9 @@ const SECTIONS = {
   export:      <Export />,
   checklist:   <InteractiveChecklist />,
   calculators: <TraceCalculator />,
+  impedance:   <ImpedanceCalculator />,
+  cost:        <CostEstimator />,
+  designtools: <DesignTools />,
   resources:   <Resources />,
 }
 
@@ -39,7 +45,6 @@ function getInitialTab() {
 function applyTheme(dark) {
   const root = document.documentElement
   root.setAttribute('data-theme', dark ? 'dark' : 'light')
-
   if (dark) {
     root.style.setProperty('--bg',          '#07090a')
     root.style.setProperty('--bg2',         '#0b1013')
@@ -59,7 +64,7 @@ function applyTheme(dark) {
     root.style.setProperty('--hover-bg',    'rgba(0,229,255,0.06)')
     root.style.setProperty('--hover-border','rgba(0,229,255,0.35)')
     root.style.setProperty('--hover-text',  '#c8dde3')
-    root.style.setProperty('--check-done-bg', '#0a1f14')
+    root.style.setProperty('--check-done-bg',     '#0a1f14')
     root.style.setProperty('--check-done-border', 'rgba(57,255,20,0.18)')
     root.style.setProperty('--ink-glow',    'rgba(0,229,255,0.6)')
     root.style.setProperty('--tab-active-bg','rgba(0,229,255,0.04)')
@@ -83,7 +88,7 @@ function applyTheme(dark) {
     root.style.setProperty('--hover-bg',    'rgba(0,151,178,0.08)')
     root.style.setProperty('--hover-border','rgba(0,151,178,0.5)')
     root.style.setProperty('--hover-text',  '#0a2530')
-    root.style.setProperty('--check-done-bg', '#eaf5e8')
+    root.style.setProperty('--check-done-bg',     '#eaf5e8')
     root.style.setProperty('--check-done-border', 'rgba(31,143,0,0.25)')
     root.style.setProperty('--ink-glow',    'rgba(0,151,178,0.4)')
     root.style.setProperty('--tab-active-bg','rgba(0,151,178,0.07)')
@@ -94,7 +99,6 @@ function applyTheme(dark) {
 export default function App() {
   const [active, setActive] = useState(getInitialTab)
 
-  // ── System theme detection ──────────────────────────────────────
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
     applyTheme(mq.matches)
@@ -103,13 +107,11 @@ export default function App() {
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  // ── URL hash sync ───────────────────────────────────────────────
   const navigate = useCallback((tabId) => {
     setActive(tabId)
     window.history.replaceState(null, '', `#${tabId}`)
   }, [])
 
-  // Handle browser back/forward
   useEffect(() => {
     const onHashChange = () => {
       const hash = window.location.hash.replace('#', '')
@@ -119,17 +121,12 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
 
-  // ── Keyboard ← → navigation ─────────────────────────────────────
   useEffect(() => {
     const onKey = (e) => {
-      // Don't hijack when typing in an input/textarea
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
       const idx = TAB_IDS.indexOf(active)
-      if (e.key === 'ArrowRight' && idx < TAB_IDS.length - 1) {
-        navigate(TAB_IDS[idx + 1])
-      } else if (e.key === 'ArrowLeft' && idx > 0) {
-        navigate(TAB_IDS[idx - 1])
-      }
+      if (e.key === 'ArrowRight' && idx < TAB_IDS.length - 1) navigate(TAB_IDS[idx + 1])
+      else if (e.key === 'ArrowLeft' && idx > 0) navigate(TAB_IDS[idx - 1])
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
