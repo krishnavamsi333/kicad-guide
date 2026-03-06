@@ -2,7 +2,7 @@
 
 > A complete interactive PCB design reference for electrical engineers learning KiCad — built with React + Vite.
 
-🔗 **Live Site:** [yourusername.github.io/kicad-guide](https://yourusername.github.io/kicad-guide)
+🔗 **Live Site:** [https://krishnavamsi333.github.io/kicad-guide/](https://krishnavamsi333.github.io/kicad-guide/)
 
 ---
 
