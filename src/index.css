@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700;900&family=Barlow+Condensed:wght@700;900&display=swap');
+
+:root {
+  --bg:          #07090a;
+  --bg2:         #0b1013;
+  --bg3:         #0f1619;
+  --panel:       #0c1417;
+  --panel2:      #101c20;
+  --border:      #172530;
+  --border2:     #1f3340;
+  --accent:      #00e5ff;
+  --accent2:     #ff6b35;
+  --accent3:     #39ff14;
+  --accent4:     #ffd600;
+  --text:        #a8bfc6;
+  --text-dim:    #3d5560;
+  --text-bright: #ddf0f5;
+  --red:         #ff3b5c;
+  --mono:  'Share Tech Mono', monospace;
+  --sans:  'Barlow', sans-serif;
+  --cond:  'Barlow Condensed', sans-serif;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Layered PCB atmosphere */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,229,255,0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.018) 1px, transparent 1px);
+  background-size: 52px 52px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Vignette + atmosphere */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 0%, rgba(0,229,255,0.05) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 85% 100%, rgba(255,107,53,0.04) 0%, transparent 55%),
+    radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.4) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(0,229,255,0.3); }
+  50%       { box-shadow: 0 0 20px rgba(0,229,255,0.6), 0 0 40px rgba(0,229,255,0.2); }
+}
+
+.fade-in { animation: fadeUp 0.35s cubic-bezier(0.22,1,0.36,1) both; }
