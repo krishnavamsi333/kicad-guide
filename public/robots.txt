@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://krishnavamsi333.github.io/kicad-guide/sitemap.xml

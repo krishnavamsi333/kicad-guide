@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Board background -->
+  <rect width="32" height="32" rx="6" fill="#0c1417"/>
+  <!-- PCB traces -->
+  <line x1="4"  y1="16" x2="10" y2="16" stroke="#00e5ff" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="22" y1="16" x2="28" y2="16" stroke="#00e5ff" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="16" y1="4"  x2="16" y2="10" stroke="#00e5ff" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="16" y1="22" x2="16" y2="28" stroke="#00e5ff" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- IC chip body -->
+  <rect x="10" y="10" width="12" height="12" rx="2" fill="#172530" stroke="#00e5ff" stroke-width="1.2"/>
+  <!-- IC pins left -->
+  <line x1="10" y1="13" x2="7"  y2="13" stroke="#ff6b35" stroke-width="1" stroke-linecap="round"/>
+  <line x1="10" y1="16" x2="7"  y2="16" stroke="#ff6b35" stroke-width="1" stroke-linecap="round"/>
+  <line x1="10" y1="19" x2="7"  y2="19" stroke="#ff6b35" stroke-width="1" stroke-linecap="round"/>
+  <!-- IC pins right -->
+  <line x1="22" y1="13" x2="25" y2="13" stroke="#ff6b35" stroke-width="1" stroke-linecap="round"/>
+  <line x1="22" y1="16" x2="25" y2="16" stroke="#ff6b35" stroke-width="1" stroke-linecap="round"/>
+  <line x1="22" y1="19" x2="25" y2="19" stroke="#ff6b35" stroke-width="1" stroke-linecap="round"/>
+  <!-- Pin 1 dot -->
+  <circle cx="12" cy="12" r="1" fill="#00e5ff"/>
+  <!-- Center via -->
+  <circle cx="16" cy="16" r="1.5" fill="#00e5ff" opacity="0.7"/>
+</svg>
