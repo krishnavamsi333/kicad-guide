@@ -17,12 +17,23 @@ const steps = [
     ],
   },
   {
-    n: '03', title: 'Assign Footprints',
-    body: 'Tools → Assign Footprints. Every symbol needs a physical footprint (the copper pads on the board). This step links logical symbols to real-world package sizes.',
+    n: '03',
+    title: 'Assign Footprints',
+    body: (
+      <>
+        Tools → Assign Footprints. Every schematic symbol must be linked to a
+        physical footprint (the copper pads on the PCB). Without this step,
+        components will not appear in the PCB layout.
+      </>
+    ),
     list: [
       'Resistors: R_0805, R_0603, R_0402 etc.',
-      'ICs: match exact package — SOIC-8, TQFP-32, etc.',
-      'Connectors: match your actual connector datasheet',
+      'ICs: match the exact package from the datasheet (SOIC-8, TQFP-32, QFN-48)',
+      'Connectors: match the exact connector part you will buy',
+      'If the footprint is not available, download one from SnapEDA or Ultra Librarian',
+      'Add downloaded libraries using Preferences → Manage Footprint Libraries',
+      'If it still does not exist, create your own in the Footprint Editor using the datasheet',
+      'If the symbol is missing, create it in the Symbol Editor and then assign the footprint',
     ],
   },
   {
@@ -64,6 +75,10 @@ const steps = [
     n: '11', title: 'Export Gerbers & Order',
     body: 'File → Fabrication Outputs → Gerbers. Generate all layers + drill files. Zip and upload to JLCPCB, PCBWay, or OSH Park.',
   },
+  {
+    n: '12', title: 'Iterate & Improve',
+    body: 'Your first PCB will have mistakes. That’s normal! When you get the board back, test it, note any issues, and update your schematic/layout accordingly for the next revision.',
+  }
 ]
 
 export default function Workflow() {
