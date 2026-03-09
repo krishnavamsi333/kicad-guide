@@ -26,54 +26,73 @@ const RESISTOR_CODES = [
   { code: '105', value: '1MΩ' },
 ]
 
-const SCALE = 28 // px per mm
+const SCALE = 28
+
+function decodeResistor(code) {
+  if (!code) return null
+
+  code = code.toUpperCase()
+
+  if (code === '000') return '0Ω jumper'
+
+  if (code.includes('R')) {
+    return code.replace('R', '.') + ' Ω'
+  }
+
+  if (code.length === 3) {
+    const base = parseInt(code.slice(0, 2))
+    const multiplier = parseInt(code[2])
+
+    const value = base * Math.pow(10, multiplier)
+
+    if (value >= 1000000) return value / 1000000 + ' MΩ'
+    if (value >= 1000) return value / 1000 + ' kΩ'
+    return value + ' Ω'
+  }
+
+  return 'Unknown'
+}
+
+function decodeCapacitor(code) {
+  if (!code || code.length !== 3) return null
+
+  const base = parseInt(code.slice(0, 2))
+  const multiplier = parseInt(code[2])
+
+  const value = base * Math.pow(10, multiplier)
+
+  if (value >= 1000000) return value / 1000000 + ' µF'
+  if (value >= 1000) return value / 1000 + ' nF'
+  return value + ' pF'
+}
 
 export default function SMDReference() {
   const [selected, setSelected] = useState('0603')
+  const [searchCode, setSearchCode] = useState('')
+
   const sel = PACKAGES.find(p => p.name === selected)
+
+  const resistorValue = decodeResistor(searchCode)
+  const capacitorValue = decodeCapacitor(searchCode)
 
   return (
     <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '2px', padding: '28px' }}>
 
-      <div className="sub-header" style={{ marginTop: 0 }}>
-        SMD Package Size Reference
-      </div>
+      <div className="sub-header">SMD Package Size Reference</div>
 
       <p style={{ fontSize: '12px', color: 'var(--text-dim)', marginBottom: '24px' }}>
-        Click a package to inspect its size, inch code meaning, and power rating.
+        Click a package to inspect size, inch code, and power rating.
       </p>
 
-      {/* Visual canvas */}
+      <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', padding: '24px', marginBottom: '24px', overflowX: 'auto' }}>
 
-      <div style={{
-        background: 'var(--bg3)',
-        border: '1px solid var(--border)',
-        borderRadius: '2px',
-        padding: '24px',
-        marginBottom: '24px',
-        overflowX: 'auto'
-      }}>
-
-        <div style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          gap: '16px',
-          minWidth: 'max-content',
-          padding: '8px 0'
-        }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '16px', minWidth: 'max-content' }}>
 
           {PACKAGES.map(pkg => (
 
-            <div
-              key={pkg.name}
+            <div key={pkg.name}
               onClick={() => setSelected(pkg.name)}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer'
-              }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
             >
 
               <div style={{
@@ -81,16 +100,13 @@ export default function SMDReference() {
                 height: `${pkg.w * SCALE}px`,
                 background: selected === pkg.name ? pkg.color : pkg.color + '33',
                 border: `2px solid ${pkg.color}`,
-                borderRadius: '2px',
-                transition: 'all 0.2s',
-                boxShadow: selected === pkg.name ? `0 0 12px ${pkg.color}66` : 'none'
+                borderRadius: '2px'
               }} />
 
               <span style={{
                 fontFamily: 'var(--mono)',
                 fontSize: '10px',
-                color: selected === pkg.name ? pkg.color : 'var(--text-dim)',
-                letterSpacing: '1px'
+                color: selected === pkg.name ? pkg.color : 'var(--text-dim)'
               }}>
                 {pkg.name}
               </span>
@@ -101,69 +117,31 @@ export default function SMDReference() {
 
         </div>
 
-        <div style={{
-          marginTop: '12px',
-          fontFamily: 'var(--mono)',
-          fontSize: '10px',
-          color: 'var(--text-dim)',
-          letterSpacing: '1px'
-        }}>
-          ← Scale: 1mm = {SCALE}px | All packages shown relative to real size →
-        </div>
-
       </div>
-
-      {/* Selected info */}
 
       {sel && (
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-          gap: '12px'
-        }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px,1fr))', gap: '12px' }}>
 
           {[
             { label: 'Package', val: sel.name, color: sel.color },
             { label: 'Inch Code', val: sel.inch, color: 'var(--accent4)' },
             { label: 'Length', val: `${sel.l} mm`, color: 'var(--accent)' },
             { label: 'Width', val: `${sel.w} mm`, color: 'var(--accent)' },
-            { label: 'Power Rating', val: sel.power, color: 'var(--accent3)' },
-            {
-              label: 'Solderable',
-              val: sel.l >= 1.6 ? 'Hand ✓' : sel.l >= 1.0 ? 'Expert' : 'Machine only',
-              color: sel.l >= 1.6 ? 'var(--accent3)' : sel.l >= 1.0 ? 'var(--accent4)' : 'var(--red)'
-            }
+            { label: 'Power Rating', val: sel.power, color: 'var(--accent3)' }
           ].map((item, i) => (
 
-            <div
-              key={i}
-              style={{
-                background: 'var(--bg3)',
-                border: `1px solid ${item.color}33`,
-                borderLeft: `3px solid ${item.color}`,
-                borderRadius: '2px',
-                padding: '12px 16px'
-              }}
-            >
+            <div key={i} style={{
+              background: 'var(--bg3)',
+              borderLeft: `3px solid ${item.color}`,
+              padding: '12px'
+            }}>
 
-              <div style={{
-                fontFamily: 'var(--mono)',
-                fontSize: '10px',
-                color: 'var(--text-dim)',
-                letterSpacing: '2px',
-                textTransform: 'uppercase',
-                marginBottom: '4px'
-              }}>
+              <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>
                 {item.label}
               </div>
 
-              <div style={{
-                fontFamily: 'var(--mono)',
-                fontSize: '18px',
-                fontWeight: 700,
-                color: item.color
-              }}>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: '18px', color: item.color }}>
                 {item.val}
               </div>
 
@@ -171,57 +149,65 @@ export default function SMDReference() {
 
           ))}
 
-          <div style={{
-            gridColumn: '1/-1',
-            background: 'var(--bg3)',
-            border: '1px solid var(--border)',
-            borderRadius: '2px',
-            padding: '12px 16px',
-            fontFamily: 'var(--mono)',
-            fontSize: '12px',
-            color: 'var(--text-dim)'
-          }}>
-            💬 {sel.desc}
-          </div>
-
         </div>
 
       )}
-
-      {/* Resistor code reference */}
 
       <div style={{ marginTop: '40px' }}>
 
         <div className="sub-header">Common SMD Resistor Codes</div>
 
-        <table style={{
-          width: '100%',
-          borderCollapse: 'collapse',
-          fontFamily: 'var(--mono)',
-          fontSize: '12px'
-        }}>
-
-          <thead>
-            <tr style={{ color: 'var(--text-dim)' }}>
-              <th style={{ textAlign: 'left', padding: '6px' }}>Code</th>
-              <th style={{ textAlign: 'left', padding: '6px' }}>Resistance</th>
-            </tr>
-          </thead>
-
+        <table style={{ width: '100%', fontFamily: 'var(--mono)', fontSize: '12px' }}>
           <tbody>
 
             {RESISTOR_CODES.map(r => (
-
               <tr key={r.code}>
-                <td style={{ padding: '6px' }}>{r.code}</td>
-                <td style={{ padding: '6px' }}>{r.value}</td>
+                <td>{r.code}</td>
+                <td>{r.value}</td>
               </tr>
-
             ))}
 
           </tbody>
-
         </table>
+
+      </div>
+
+      <div style={{ marginTop: '40px' }}>
+
+        <div className="sub-header">SMD Code Decoder</div>
+
+        <input
+          value={searchCode}
+          onChange={(e) => setSearchCode(e.target.value)}
+          placeholder="Enter code (103, 472, 4R7)"
+          style={{
+            padding: '10px',
+            border: '1px solid var(--border)',
+            background: 'var(--bg3)',
+            fontFamily: 'var(--mono)',
+            marginBottom: '20px'
+          }}
+        />
+
+        {searchCode && (
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+
+            <div style={{ background: 'var(--bg3)', padding: '12px', borderLeft: '3px solid var(--accent)' }}>
+              <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>RESISTOR</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: '18px' }}>{resistorValue}</div>
+            </div>
+
+            <div style={{ background: 'var(--bg3)', padding: '12px', borderLeft: '3px solid var(--accent4)' }}>
+              <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>CAPACITOR</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: '18px' }}>
+                {capacitorValue || 'Unknown'}
+              </div>
+            </div>
+
+          </div>
+
+        )}
 
       </div>
 
