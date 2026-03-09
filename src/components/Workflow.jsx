@@ -6,14 +6,16 @@ const steps = [
     body: <>File → New Project. KiCad creates a folder with <code>.kicad_pro</code>, <code>.kicad_sch</code>, and <code>.kicad_pcb</code> files. Keep everything in this folder.</>,
   },
   {
-    n: '02', title: 'Draw Schematic (Eeschema)',
-    body: 'Double-click the .kicad_sch file or open from Project Manager. This is where you design the circuit logically — no physical placement yet.',
+    n: '02',
+    title: 'Draw Schematic (Eeschema)',
+    body: 'Open the schematic editor by double-clicking the .kicad_sch file or opening it from the Project Manager. The schematic is where you design the electrical circuit and define how components connect together. At this stage you are NOT placing components physically on the PCB yet — you are only describing the circuit connections.',
     list: [
-      'Add symbols with A — search by part name or value',
-      'Connect with wires using W',
-      'Add power symbols (VCC, GND) with P',
-      'Add labels to name nets using L',
-      'Add values and references to every component',
+      'Add components (symbols) by pressing A. Search for parts like resistor, capacitor, LED, microcontroller, etc., and place them on the schematic.',
+      'Connect component pins using wires. Press W to draw wires between pins to create electrical connections.',
+      'Add power symbols using P. Use symbols like VCC, +5V, +3.3V, and GND to define power connections in your circuit.',
+      'Name important signals using labels. Press L to add net labels such as SDA, SCL, RESET, or TX so circuits stay organized.',
+      'Find the Value field.Change it to the desired value (examples: 10uF, 100nF, 1uF).Edit component values when needed. Select a component and press E to change its value (example: resistor 10k, capacitor 100nF).',
+      'Make sure every component has a reference and value (examples: R1, R2, C1, U1). KiCad can automatically assign these later using the Annotate tool.'
     ],
   },
   {
