@@ -287,9 +287,498 @@ const COMPONENTS = [
   },
 ]
 
-export default function ComponentEncyclopedia() {
-  const [category, setCategory] = useState('Passives')
+// ─────────────────────────────────────────────────────────────────
+// VALUE → FOOTPRINT GUIDE DATA
+// ─────────────────────────────────────────────────────────────────
+
+// Each rule entry has smd[] and tht[] arrays. COMPLETE real-world package lists.
+const FOOTPRINT_RULES = [
+  {
+    type: 'Resistor',
+    symbol: 'R',
+    color: 'var(--accent4)',
+    icon: '▭',
+    concept: `A resistor's value (Ω) has **NO relationship** to physical size — 10Ω and 10MΩ share the same 0402 footprint. What drives the package is **power rating (watts)** and **voltage rating**.\n\nEvery value is available in the full SMD range (0201 → 4527) AND THT axial. Same value, completely different footprints.`,
+    chooseSMD: 'Any production PCB. Compact layout. Automated pick-and-place. Power < 2W.',
+    chooseTHT: 'Breadboard / perfboard prototyping. Power > 2W. High voltage > 200V. User-replaceable fuses/sense resistors.',
+    smd: [
+      { test: 'P < 31 mW — ultra miniature', package: '0201  (0.6×0.3mm)', kiCad: 'Resistor_SMD:R_0201_0603Metric', note: 'Machine-placement only. Not hand-solderable. RF/ultra-compact.' },
+      { test: 'P < 62.5 mW — compact signal', package: '0402  (1.0×0.5mm)', kiCad: 'Resistor_SMD:R_0402_1005Metric', note: 'Very common. Hard to hand-solder without magnification.' },
+      { test: 'P < 100 mW — general purpose ★', package: '0603  (1.6×0.8mm)', kiCad: 'Resistor_SMD:R_0603_1608Metric', note: 'Default recommendation. Good hand-solderability + size balance.' },
+      { test: 'P < 125 mW — beginner friendly', package: '0805  (2.0×1.25mm)', kiCad: 'Resistor_SMD:R_0805_2012Metric', note: 'Easier to solder than 0603. Slightly larger.' },
+      { test: 'P < 250 mW — higher dissipation', package: '1206  (3.2×1.6mm)', kiCad: 'Resistor_SMD:R_1206_3216Metric', note: 'Good for 100–250mW. Larger thermal mass.' },
+      { test: 'P < 500 mW — wide body', package: '1210  (3.2×2.5mm)', kiCad: 'Resistor_SMD:R_1210_3225Metric', note: 'Wider than 1206. Handles more power in same length.' },
+      { test: 'P < 750 mW — power chip', package: '2010  (5.0×2.5mm)', kiCad: 'Resistor_SMD:R_2010_5025Metric', note: 'Current-sense resistors, shunts. Low resistance values.' },
+      { test: 'P < 1 W — large power chip', package: '2512  (6.3×3.2mm)', kiCad: 'Resistor_SMD:R_2512_6332Metric', note: 'Biggest standard chip resistor. Shunt / power resistor.' },
+      { test: 'P 1–3 W — open frame power', package: '4527 / TO-263 power', kiCad: 'Resistor_SMD:R_4527_11569Metric', note: 'Large open-frame SMD power resistor. Check datasheet dims.' },
+      { test: 'Shunt / current sense (mΩ range)', package: '2512 or 4-terminal Kelvin', kiCad: 'Resistor_SMD:R_2512_6332Metric', note: '4-terminal (Kelvin) package eliminates lead resistance error.' },
+      { test: 'Resistor array — 4 or 8 resistors', package: 'convex SOP / concave', kiCad: 'Resistor_SMD:R_Array_SOP-8_P1.27mm', note: 'One footprint, multiple resistors. Saves board space.' },
+      { test: 'High-voltage > 200V SMD', package: '1206 HV or 2010 HV', kiCad: 'Resistor_SMD:R_1206_3216Metric', note: 'Must buy HV-rated part. Standard 0402/0603 only rated 50–100V.' },
+    ],
+    tht: [
+      { test: 'P < 250 mW — 1/4W standard', package: 'Axial DO-7 / L6.3mm D2.5mm', kiCad: 'Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm', note: 'Classic carbon film. Most common resistor on earth.' },
+      { test: 'P < 500 mW — 1/2W', package: 'Axial L6.8mm D2.5mm P10.16mm', kiCad: 'Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm', note: 'Wider pitch for larger body.' },
+      { test: 'P < 1 W', package: 'Axial DIN0414 L9.9mm D3.6mm', kiCad: 'Resistor_THT:R_Axial_DIN0414_L9.9mm_D3.6mm_P15.24mm', note: 'Metal film 1W. Check body length in datasheet.' },
+      { test: 'P 2–5 W — wirewound', package: 'Wirewound axial L20mm W6.4mm', kiCad: 'Resistor_THT:R_Axial_Power_L20.0mm_W6.4mm_P22.40mm', note: 'Ceramic core wirewound. Inductive at high freq — avoid for RF.' },
+      { test: 'P 5–25 W — cement/aluminium', package: 'Cement box or alu-clad SIP', kiCad: 'Resistor_THT:R_Radial_box_L37.0mm_W8.0mm_P28.00mm', note: 'Bolt cement type to chassis. Alu-clad SIP: bolt to heatsink.' },
+    ],
+    voltage: '0201/0402: 50V rated. 0603: 75V. 0805: 150V. 1206+: 200V. For > 200V buy HV-rated parts explicitly. THT axial: 200–500V standard.',
+    example: 'LED limiter 5V/20mA: P=(5−2)×0.02=60mW → 0603 SMD (Resistor_SMD:R_0603). Breadboard: 1/4W axial. 100mΩ current shunt at 5A: P=2.5W → 2512 SMD Kelvin 4-terminal.',
+  },
+  {
+    type: 'Capacitor (Ceramic)',
+    symbol: 'C',
+    color: 'var(--accent)',
+    icon: '⊣⊢',
+    concept: `**Both value AND voltage rating** determine the SMD ceramic package. Higher capacitance or higher voltage needs a physically larger package to hold the dielectric.\n\nThe same 100nF value exists in every size from 0201 to 1812. The same value at 100V needs a bigger package than at 10V. Same value in THT = ceramic disc.`,
+    chooseSMD: 'Any PCB. Decoupling, bypass, filter, timing. Values 0201–1812 cover 1pF to 100µF.',
+    chooseTHT: 'Breadboard, prototyping, high-voltage disc snubbers, mains safety Y/X caps.',
+    smd: [
+      { test: '1pF – 10nF, up to 25V — RF/timing', package: '0201  (0.6×0.3mm)', kiCad: 'Capacitor_SMD:C_0201_0603Metric', note: 'Machine-place only. RF matching networks, tiny oscillator caps.' },
+      { test: '10pF – 100nF, up to 50V — decoupling ★', package: '0402  (1.0×0.5mm)', kiCad: 'Capacitor_SMD:C_0402_1005Metric', note: '100nF X7R 0402 10V = the most ordered capacitor in electronics.' },
+      { test: '100nF – 1µF, up to 50V — bypass ★', package: '0603  (1.6×0.8mm)', kiCad: 'Capacitor_SMD:C_0603_1608Metric', note: '1µF 10V X5R 0603 — standard bulk bypass. Easy to hand-solder.' },
+      { test: '1µF – 10µF, up to 25V', package: '0805  (2.0×1.25mm)', kiCad: 'Capacitor_SMD:C_0805_2012Metric', note: '10µF 10V X5R 0805 — common LDO output cap.' },
+      { test: '10µF – 47µF, up to 25V', package: '1206  (3.2×1.6mm)', kiCad: 'Capacitor_SMD:C_1206_3216Metric', note: '47µF 10V X5R in 1206. Getting large — consider electrolytic.' },
+      { test: '100nF – 10µF, up to 100V', package: '1210  (3.2×2.5mm)', kiCad: 'Capacitor_SMD:C_1210_3225Metric', note: 'Wider body handles higher voltage. 4.7µF 100V fits in 1210.' },
+      { test: '10µF – 100µF, up to 50V — large value', package: '1812  (4.5×3.2mm)', kiCad: 'Capacitor_SMD:C_1812_4532Metric', note: 'Largest common chip cap. 100µF 10V X5R available in 1812.' },
+      { test: '1pF – 1nF, NP0/C0G — precision', package: '0402 or 0603 NP0', kiCad: 'Capacitor_SMD:C_0402_1005Metric', note: 'NP0/C0G: zero tempco, no DC bias shift. Use for oscillators, filters.' },
+      { test: 'High ripple current — power supply output', package: '1210 X5R or 1812 X5R', kiCad: 'Capacitor_SMD:C_1210_3225Metric', note: 'X5R/X7R handle ripple better than electrolytic at high freq.' },
+      { test: '> 100µF SMD ceramic', package: 'Not practical — use electrolytic', kiCad: '—', note: 'Beyond 100µF, ceramic becomes expensive. Use SMD electrolytic.' },
+    ],
+    tht: [
+      { test: '10pF – 100nF, up to 50V', package: 'Disc D5mm P2.5mm', kiCad: 'Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P2.50mm', note: 'Classic blue/yellow ceramic disc. Ubiquitous on hobby boards.' },
+      { test: '100nF – 10nF, up to 100V', package: 'Disc D7.5mm P5mm', kiCad: 'Capacitor_THT:C_Disc_D7.5mm_W2.5mm_P5.00mm', note: 'Larger disc. Read voltage rating printed on body.' },
+      { test: '1nF – 100nF, up to 250V', package: 'Disc D4.5mm P2.5mm (HV)', kiCad: 'Capacitor_THT:C_Disc_D4.7mm_W2.5mm_P2.50mm', note: 'High-voltage rated. Common in CRT / mains snubbers.' },
+      { test: 'Mains filter — X2 cap 100–470nF', package: 'Box/safety D13mm P7.5mm', kiCad: 'Capacitor_THT:C_Disc_D13.0mm_W3.5mm_P7.50mm', note: 'X2 rated for across-the-line. Fail-safe. NEVER use standard cap.' },
+      { test: 'Mains filter — Y1/Y2 cap 4.7–10nF', package: 'Safety disc P5mm', kiCad: 'Capacitor_THT:C_Disc_D7.5mm_W2.5mm_P5.00mm', note: 'Y-cap: line to ground. Must be Y-safety rated. Leakage current controlled.' },
+    ],
+    voltage: 'CRITICAL: always rate 2× circuit voltage. DC bias effect: X5R/X7R lose capacitance at rated voltage — a "10µF 10V" cap may only have 3µF at 9V. Use NP0 for precision.',
+    example: '100nF decoupling on 3.3V MCU pin: 0402 X7R 10V (C_0402). 10µF LDO output on 5V rail: 0805 X5R 10V (C_0805). Breadboard: disc ceramic D5mm P2.5mm. Same schematic, different footprint.',
+  },
+  {
+    type: 'Capacitor (Electrolytic)',
+    symbol: 'C',
+    color: 'var(--accent)',
+    icon: '⊣⊢',
+    concept: `Electrolytics exist in **THT radial** (cylindrical, 2 through-hole legs) and **SMD aluminium / polymer / tantalum** versions — same capacitance value available in both.\n\nFootprint is set by **physical body diameter and height** — not capacitance alone. Same 100µF at 16V vs 50V = different diameter. Always read the datasheet mechanical drawing.`,
+    chooseSMD: 'Production PCB, height-limited designs, reflow assembly. SMD polymer has excellent ESR.',
+    chooseTHT: 'Prototyping, bulk caps > 1000µF, easy hand-replacement, low-cost boards.',
+    smd: [
+      { test: '1µF – 10µF up to 16V', package: 'SMD Al-Elec D4mm H5.4mm', kiCad: 'Capacitor_SMD:CP_Elec_4x5.4', note: 'Smallest SMD electrolytic. Stripe = negative.' },
+      { test: '10µF – 47µF up to 16V', package: 'SMD Al-Elec D5mm H5.4mm', kiCad: 'Capacitor_SMD:CP_Elec_5x5.4', note: 'e.g. Panasonic EEE-FK series. Very common.' },
+      { test: '47µF – 100µF up to 25V', package: 'SMD Al-Elec D6.3mm H7.7mm', kiCad: 'Capacitor_SMD:CP_Elec_6.3x7.7', note: 'Common SMD electrolytic size. Check height clearance.' },
+      { test: '100µF – 220µF up to 25V', package: 'SMD Al-Elec D8mm H10.2mm', kiCad: 'Capacitor_SMD:CP_Elec_8x10.2', note: 'Larger body. Panasonic EEE-FP / FR series.' },
+      { test: '220µF – 470µF up to 16V', package: 'SMD Al-Elec D10mm H12.5mm', kiCad: 'Capacitor_SMD:CP_Elec_10x12.5', note: 'Near max for SMD electrolytic. Consider THT at this size.' },
+      { test: '1µF – 100µF — low ESR polymer ★', package: 'SMD Polymer D6.3–10mm', kiCad: 'Capacitor_SMD:CP_Elec_6.3x7.7', note: 'OS-CON / Panasonic SP: 10× lower ESR. Best for SMPS output.' },
+      { test: '0.1µF – 1000µF — tantalum, Case A', package: 'Tant Case-A  EIA-3216 (3.2×1.6mm)', kiCad: 'Capacitor_SMD:CP_Tantalum_Case-A_EIA-3216-18', note: '10µF 10V most common. Polarity stripe = positive.' },
+      { test: 'Tantalum — Case B (medium)', package: 'Tant Case-B  EIA-3528 (3.5×2.8mm)', kiCad: 'Capacitor_SMD:CP_Tantalum_Case-B_EIA-3528-21', note: '47µF 10V typical. Kemet T491 series.' },
+      { test: 'Tantalum — Case C (large)', package: 'Tant Case-C  EIA-6032 (6.0×3.2mm)', kiCad: 'Capacitor_SMD:CP_Tantalum_Case-C_EIA-6032-28', note: '100µF 10V typical. Never exceed 50% of rated voltage.' },
+      { test: 'Tantalum — Case D (extra large)', package: 'Tant Case-D  EIA-7343 (7.3×4.3mm)', kiCad: 'Capacitor_SMD:CP_Tantalum_Case-D_EIA-7343-31', note: '330µF 10V. Large SMD tant. Polarity CRITICAL — reverse = failure.' },
+    ],
+    tht: [
+      { test: '1µF – 22µF, ≤16V', package: 'Radial D5mm P2mm', kiCad: 'Capacitor_THT:CP_Radial_D5.0mm_P2.00mm', note: 'Smallest common THT electrolytic. Some 1µF are D4mm — check.' },
+      { test: '22µF – 220µF, up to 25V', package: 'Radial D6.3mm P2.5mm', kiCad: 'Capacitor_THT:CP_Radial_D6.3mm_P2.50mm', note: 'Most common. 100µF 16V usually fits here. White stripe = negative.' },
+      { test: '220µF – 1000µF, up to 25V', package: 'Radial D8mm P3.5mm', kiCad: 'Capacitor_THT:CP_Radial_D8.0mm_P3.50mm', note: '470µF 16V standard size.' },
+      { test: '1000µF – 3300µF, up to 35V', package: 'Radial D10mm P5mm', kiCad: 'Capacitor_THT:CP_Radial_D10.0mm_P5.00mm', note: 'Bulk filter. Mind height — may clash with nearby components.' },
+      { test: '> 3300µF or > 50V', package: 'Radial D12.5mm or D16mm P7.5mm', kiCad: 'Capacitor_THT:CP_Radial_D12.5mm_P5.00mm', note: 'Large reservoir cap. Check height and lead pitch from datasheet.' },
+    ],
+    voltage: 'Same capacitance at higher voltage = bigger body. 100µF 16V ≠ 100µF 50V footprint. Tantalum: never exceed 50% of rated voltage — reverse voltage = instant failure.',
+    example: '100µF bulk cap on 5V rail: THT → Nichicon D6.3mm (CP_Radial_D6.3mm). SMD production → Panasonic EEE-FP 6.3×7.7 (CP_Elec_6.3x7.7). SMPS output low-ESR: SMD polymer same footprint.',
+  },
+  {
+    type: 'Inductor',
+    symbol: 'L',
+    color: 'var(--accent3)',
+    icon: '∿',
+    concept: `The **same inductance value** (e.g. 10µH) is available as a tiny SMD chip, a shielded SMD power inductor, or a THT axial/toroid — completely different footprints.\n\n**Inductance value alone tells you nothing about size.** A 10µH at 100mA is 0402 size. A 10µH at 10A is the size of a fingernail. The critical spec is **Isat (saturation current)**.`,
+    chooseSMD: 'All PCB SMPS designs. Shielded SMD = less EMI. Chip inductors for RF/signal. Power inductors for buck/boost.',
+    chooseTHT: 'Prototyping, audio chokes, high-current (>15A) power, hand-wound toroids, isolation transformers.',
+    smd: [
+      { test: '1nH – 100nH, RF matching', package: '0201 chip  (0.6×0.3mm)', kiCad: 'Inductor_SMD:L_0201_0603Metric', note: 'RF matching. Machine-place only. Murata LQG series.' },
+      { test: '1nH – 470nH, RF/HF signal', package: '0402 chip  (1.0×0.5mm)', kiCad: 'Inductor_SMD:L_0402_1005Metric', note: 'RF chokes, bias tees. Murata LQW/LQG. Imax < 300mA.' },
+      { test: '1nH – 1µH, signal / EMI bead', package: '0603 chip  (1.6×0.8mm)', kiCad: 'Inductor_SMD:L_0603_1608Metric', note: 'EMI beads in 0603. Würth WE-CBF. < 500mA.' },
+      { test: '1µH – 100µH, < 300mA', package: '0805 chip  (2.0×1.25mm)', kiCad: 'Inductor_SMD:L_0805_2012Metric', note: 'Signal inductors, small filters. TDK MLK series.' },
+      { test: '1µH – 470µH, < 500mA', package: '1210 chip  (3.2×2.5mm)', kiCad: 'Inductor_SMD:L_1210_3225Metric', note: 'Larger chip. Low-current buck at 1210.' },
+      { test: '1µH – 22µH, < 1A — small SMPS', package: 'Shielded 2×2mm (2020)', kiCad: 'Inductor_SMD:L_2.0x2.0_H1.0mm', note: 'e.g. TDK SLF2012. Ultra-compact buck converter.' },
+      { test: '1µH – 47µH, 1–2A', package: 'Shielded 3×3mm (3015)', kiCad: 'Inductor_SMD:L_3.0x3.0_H1.5mm', note: 'e.g. Bourns SRR0302. 5V/1A buck.' },
+      { test: '1µH – 47µH, 1.5–3A ★', package: 'Shielded 4×4mm (4018)', kiCad: 'Inductor_SMD:L_4.0x4.0_H2.1mm', note: 'Bourns SRR1005, TDK VLF4012. Most common SMPS inductor.' },
+      { test: '1µH – 68µH, 3–6A', package: 'Shielded 5×5mm (5020)', kiCad: 'Inductor_SMD:L_5.0x5.0_H2.0mm', note: 'e.g. Bourns SRR1260, Würth WE-MAPI 5040.' },
+      { test: '1µH – 100µH, 5–10A', package: 'Shielded 6×6mm (6028)', kiCad: 'Inductor_SMD:L_6.0x6.0_H2.8mm', note: 'e.g. TDK CLF6045, Vishay IHLP-2525. High-current buck.' },
+      { test: '1µH – 100µH, 8–15A', package: 'Shielded 8×8mm (8040)', kiCad: 'Inductor_SMD:L_8.0x8.0_H4.0mm', note: 'e.g. Vishay IHLP-2525CZ, Würth WE-LHMI 8040. CPU/GPU power.' },
+      { test: '1µH – 22µH, 15–30A — high-power', package: 'Shielded 10×10mm or 12×12mm', kiCad: 'Inductor_SMD:L_10.0x10.0_H4.0mm', note: 'e.g. Vishay IHLP-5050. Large footprint — verify vs datasheet.' },
+      { test: 'EMI suppression bead — any size', package: '0402 / 0603 / 0805 bead', kiCad: 'Inductor_SMD:L_0402_1005Metric', note: 'Ferrite bead — same footprint as chip inductor. Use bead library entry in KiCad.' },
+    ],
+    tht: [
+      { test: '< 100µH, < 500mA — prototype', package: 'Axial L5.3mm D2.2mm P10mm', kiCad: 'Inductor_THT:L_Axial_L5.3mm_D2.2mm_P10.16mm', note: 'Bourns 78F series. Same axial footprint family as resistors.' },
+      { test: '10µH – 10mH, any current — toroid', package: 'Toroid vertical D10mm P5mm', kiCad: 'Inductor_THT:L_Toroid_Vertical_D10.0mm_P5.00mm', note: 'Hand-wound. Excellent EMI containment. Footprint = outer diameter.' },
+      { test: '> 5A high-current — large toroid', package: 'Toroid D13mm or D20mm', kiCad: 'Inductor_THT:L_Toroid_Vertical_D13.0mm_P7.50mm', note: 'Iron powder / ferrite toroid. Common in 10–50A power supplies.' },
+      { test: 'Audio choke', package: 'Radial drum D7mm P2.5mm', kiCad: 'Inductor_THT:L_Radial_D7.0mm_P2.50mm', note: 'Drum core. Measure body for correct footprint.' },
+    ],
+    voltage: 'Key specs to match: **Isat** (saturation current — must exceed your peak current) and **DCR** (DC resistance — lower = less heat). Exceeding Isat = inductance collapses → disaster.',
+    example: '4.7µH buck at 2A peak: shielded 4×4mm SMD, Bourns SRR1005-4R7Y (Isat=2.5A) → L_4.0x4.0. 100µH audio choke < 200mA: THT axial Bourns 78F101J → L_Axial. Same value, very different packages.',
+  },
+  {
+    type: 'LED',
+    symbol: 'D',
+    color: 'var(--accent2)',
+    icon: '▷|',
+    concept: `The same LED colour/Vf exists in SMD (0402 → 5050 → high-power module) and THT (D3mm, D5mm) packages. Same schematic symbol — completely different footprint.\n\nPackage choice is driven by **brightness requirement**, **assembly method**, and **whether it must be visible outside an enclosure**.`,
+    chooseSMD: 'PCB-mounted indicators. Compact boards. RGB addressable strips. Reflow production.',
+    chooseTHT: 'Panel-mount visible indicators. Prototyping. Breadboard. Any LED that pokes through an enclosure.',
+    smd: [
+      { test: 'Ultra-tiny status — any colour', package: '0201  (0.6×0.3mm)', kiCad: 'LED_SMD:LED_0201_0603Metric', note: 'Machine-place only. Hard to distinguish anode/cathode by eye.' },
+      { test: 'Compact status indicator', package: '0402  (1.0×0.5mm)', kiCad: 'LED_SMD:LED_0402_1005Metric', note: 'Very common. Cathode = bevelled corner. Needs magnification.' },
+      { test: 'Standard status indicator ★', package: '0603  (1.6×0.8mm)', kiCad: 'LED_SMD:LED_0603_1608Metric', note: 'Best default. Hand-solderable. Cathode triangle mark on body.' },
+      { test: 'High-brightness indicator', package: '0805  (2.0×1.25mm)', kiCad: 'LED_SMD:LED_0805_2012Metric', note: 'Brighter than 0603. Still compact. 5–20mA typical.' },
+      { test: 'Large visible indicator / logo', package: '1206  (3.2×1.6mm)', kiCad: 'LED_SMD:LED_1206_3216Metric', note: 'Very visible. Bright. Good for indicators on panels.' },
+      { test: 'Bi-colour or 2-LED package', package: '1206 dual or SOT-23-3', kiCad: 'LED_SMD:LED_1206_3216Metric', note: 'Anode-common or cathode-common. Check datasheet pinout.' },
+      { test: 'RGB — WS2812B / NeoPixel', package: '5050  (5.0×5.0mm)', kiCad: 'LED_SMD:LED_5050_5.6x5.0mm_P3.45mm', note: 'Addressable. 4 pads (Vdd, Dout, GND, Din). Orientation matters.' },
+      { test: 'RGB — compact board', package: '3535  (3.5×3.5mm)', kiCad: 'LED_SMD:LED_3535_3.5x3.5mm_P2.60mm', note: 'Smaller than 5050. SK6812 mini series.' },
+      { test: 'RGB — ultra compact', package: '2020  (2.0×2.0mm)', kiCad: 'LED_SMD:LED_2020_2.0x2.0mm', note: 'SK6812 mini-E. Very small addressable. Machine-place only.' },
+      { test: 'High-power LED (>100mW)', package: 'Star / MCPCB module 20mm', kiCad: 'LED_SMD:LED_Cree_XHP70', note: 'Dedicated high-power footprint. MUST solder to thermal pad.' },
+      { test: 'Side-emitting (lightguide)', package: '0603 side-view or 0805 side', kiCad: 'LED_SMD:LED_0603SideView', note: 'Emits parallel to board. Used with lightguide pipes to panel.' },
+      { test: 'Infrared TX/RX (IR remote)', package: '0603 or 0805 IR', kiCad: 'LED_SMD:LED_0603_1608Metric', note: 'Same 0603/0805 footprint. Verify wavelength (850/940nm).' },
+    ],
+    tht: [
+      { test: 'Prototype / breadboard', package: 'D3mm round', kiCad: 'LED_THT:LED_D3.0mm', note: 'Flat side on body = cathode. Short lead = cathode.' },
+      { test: 'Standard hobbyist LED ★', package: 'D5mm round', kiCad: 'LED_THT:LED_D5.0mm', note: 'Most common. Long lead = anode. Flat edge on rim = cathode.' },
+      { test: 'Panel-mount 3mm bezel', package: 'D3mm flat-top', kiCad: 'LED_THT:LED_D3.0mm_FlatTop', note: 'Snaps into 3.2mm panel hole.' },
+      { test: 'Panel-mount 5mm bezel', package: 'D5mm flat-top', kiCad: 'LED_THT:LED_D5.0mm_FlatTop', note: 'Snaps into 5.2mm panel hole. Standard instrument indicator.' },
+      { test: 'Edge-pointing at board edge', package: 'D5mm right-angle', kiCad: 'LED_THT:LED_D5.0mm_Horizontal_O1.27mm_Z3.0mm', note: 'Emits parallel to PCB surface.' },
+      { test: 'High-power THT (torch/flood)', package: 'D8mm or D10mm power LED', kiCad: 'LED_THT:LED_D8.0mm', note: 'Typically > 500mW. Needs heatsink or large copper pad.' },
+    ],
+    voltage: 'Vf by colour: Red/IR ≈2.0V, Yellow/Amber ≈2.1V, Green ≈3.2V, Blue ≈3.3V, White ≈3.2V, UV ≈3.5V. Identical for SMD and THT of same colour.',
+    example: 'Blue power LED on 3.3V at 5mA: R=(3.3−3.2)/0.005=20Ω, use 22Ω 0603. LED: SMD 0603 on PCB (LED_0603), or THT D5mm on breadboard. Same R value, swap LED footprint only.',
+  },
+  {
+    type: 'Diode / Zener',
+    symbol: 'D',
+    color: 'var(--accent3)',
+    icon: '▷|',
+    concept: `Diodes exist in a huge range of SMD packages and THT axial packages for the **same part number** — 1N4148 comes as SOD-523 (tiny SMD), SOD-323, SOD-123, SOT-23, and DO-35 (THT). All same electrical specs, completely different footprint.\n\nPackage is driven by **peak current** and **reverse voltage**, not "value" — diodes don't have a value in the resistor sense.`,
+    chooseSMD: 'Any PCB. Signal, ESD, Schottky, Zener, TVS. SOD-123 is the easiest to hand-solder.',
+    chooseTHT: 'Prototyping. High-current rectifiers > 3A. Bridge rectifiers. Breadboard.',
+    smd: [
+      { test: 'ESD clamp / signal (< 100mA) — tiny', package: 'SOD-523  (1.2×0.8mm)', kiCad: 'Diode_SMD:D_SOD-523', note: 'Smallest SMD diode. Machine-place only. ESD arrays only.' },
+      { test: 'Signal diode / Schottky (< 200mA) ★', package: 'SOD-323  (1.7×1.25mm)', kiCad: 'Diode_SMD:D_SOD-323', note: '1N4148W in SOD-323. Most common SMD signal diode package.' },
+      { test: 'Signal / Zener (< 500mA) — easy solder ★', package: 'SOD-123  (3.6×1.55mm)', kiCad: 'Diode_SMD:D_SOD-123', note: 'Easiest SMD diode to hand-solder. 1N4148WS, BAT54.' },
+      { test: 'General-purpose / Schottky (< 1A)', package: 'SOD-123F  (flat leads)', kiCad: 'Diode_SMD:D_SOD-123', note: 'Flat lead variant. Better reflow solderability than SOD-123.' },
+      { test: 'Zener precision reference', package: 'SOT-23-3  (3-pin)', kiCad: 'Diode_SMD:D_SOT-23', note: 'BZX84 Zener in SOT-23. Pin 1=A, pin 3=K. Confirm pinout!' },
+      { test: 'Dual diode (common anode or cathode)', package: 'SOT-23-3 or SOT-363', kiCad: 'Diode_SMD:D_SOT-23', note: 'BAV99 (dual serial). BAT54S (dual common cathode).' },
+      { test: 'Rectifier 1A — SMD equivalent of 1N4007', package: 'SMA  (DO-214AC, 5.4×2.7mm)', kiCad: 'Diode_SMD:D_SMA', note: 'S1M = 1000V 1A SMA. Most common SMD rectifier.' },
+      { test: 'Rectifier 2A', package: 'SMB  (DO-214AA, 5.4×3.6mm)', kiCad: 'Diode_SMD:D_SMB', note: 'Higher current than SMA. Same footprint family.' },
+      { test: 'Rectifier 3A', package: 'SMC  (DO-214AB, 8.0×5.8mm)', kiCad: 'Diode_SMD:D_SMC', note: 'Largest of the DO-214 family. 3A sustained.' },
+      { test: 'TVS — single line protection', package: 'SMA or SOD-323', kiCad: 'Diode_SMD:D_SMA', note: 'Choose TVS Vbr > max signal voltage. SMAJ5.0A = 5V line.' },
+      { test: 'TVS — bidirectional (AC lines)', package: 'SMB or SMC', kiCad: 'Diode_SMD:D_SMB', note: 'Bidirectional TVS. SMBJ series. Protects both polarities.' },
+      { test: 'Schottky rectifier < 1A (low Vf)', package: 'SOD-123 or SMA', kiCad: 'Diode_SMD:D_SOD-123', note: 'BAT85 (0.3V Vf). Use for reverse polarity, power ORing.' },
+      { test: 'High-speed switching (< 4ns)', package: 'SOD-323 or SOD-123', kiCad: 'Diode_SMD:D_SOD-323', note: '1N4148W trr=4ns. BAS116 trr=1ns. For fast clamp circuits.' },
+    ],
+    tht: [
+      { test: 'Signal / switching (< 200mA) — 1N4148', package: 'DO-35 axial  L3.0mm D1.7mm', kiCad: 'Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal', note: 'Tiny glass bead. Black band = cathode. Standard pitch 7.62mm.' },
+      { test: 'Rectifier up to 1A — 1N4001–1N4007', package: 'DO-41 axial  L5.2mm D2.7mm', kiCad: 'Diode_THT:D_DO-41_SOD81_P10.16mm_Horizontal', note: '1N4007 = 1000V 1A. Most used rectifier ever made.' },
+      { test: 'Rectifier 3A — 1N5400–1N5408', package: 'DO-201AD axial  L9.5mm D4.5mm', kiCad: 'Diode_THT:D_DO-201AD_P15.24mm_Horizontal', note: 'Bigger than DO-41. 3A sustained. P15.24mm pitch.' },
+      { test: 'Schottky THT (< 3A) — 1N5817–1N5819', package: 'DO-41 axial', kiCad: 'Diode_THT:D_DO-41_SOD81_P10.16mm_Horizontal', note: '1N5819: 40V 1A Schottky in DO-41. 0.4V Vf.' },
+      { test: 'Zener reference THT', package: 'DO-35 or DO-41', kiCad: 'Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal', note: 'BZX55 (DO-35) 0.5W. BZX85 (DO-41) 1.3W. Band = cathode.' },
+      { test: 'Bridge rectifier 1–35A', package: 'DIP-4 round or square body', kiCad: 'Diode_THT:D_Bridge_Round_Convex_D3.7mm', note: '4 pins: AC, AC, +, −. KBP series (2A), KBPC (35A).' },
+    ],
+    voltage: '1N4148=75V signal. 1N4001=50V, 1N4007=1000V rectifier. Always check Vr > your peak reverse voltage with margin. TVS clamp voltage must be above normal signal swing.',
+    example: 'Flyback protection on 12V relay: THT → 1N4007 DO-41. PCB production → S1M SMA. GPIO ESD protection on 3.3V: SOD-323 TVS (PRTR5V0U2X). Same job, three different footprints.',
+  },
+  {
+    type: 'MOSFET / Transistor',
+    symbol: 'Q',
+    color: 'var(--accent4)',
+    icon: '⊳|',
+    concept: `The same transistor type (e.g. 2N7002 MOSFET) exists in SOT-23 SMD and TO-92 THT. Higher-power transistors go from SOT-223 → DPAK → D2PAK → TO-220 → TO-247 as power increases.\n\nPackage is driven by **power dissipation** (P = Id² × Rds_on for MOSFETs; P = Vce × Ic for BJTs). Calculate heat first — then pick the smallest package that can handle it.`,
+    chooseSMD: 'All PCB designs. SOT-23 for signal. SOT-223/DPAK/D2PAK for power. PowerPAK/LFPAK for ultra-compact high power.',
+    chooseTHT: 'High power > 5W needing heatsink. Prototyping. Replaceable parts. Motor/solenoid drivers on prototype boards.',
+    smd: [
+      { test: 'Signal switch < 100mA, logic output', package: 'SC-70 / SOT-323  (2.0×2.1mm)', kiCad: 'Package_TO_SOT_SMD:SC-70', note: 'Smaller than SOT-23. Same pinout. BCR10PN, 2SK3018.' },
+      { test: 'Signal switch < 200mA ★', package: 'SOT-23-3  (2.9×1.3mm)', kiCad: 'Package_TO_SOT_SMD:SOT-23', note: '2N7002, BSS138, BC847, IRLML2502. Most common small transistor.' },
+      { test: '< 500mA, dual MOSFET or BJT', package: 'SOT-23-6  (2.9×1.6mm)', kiCad: 'Package_TO_SOT_SMD:SOT-23-6', note: 'FDG6301N (dual N), BAT54S. 6 pins in SOT-23 footprint.' },
+      { test: '< 1A, single channel — compact', package: 'SOT-89  (4.5×2.5mm)', kiCad: 'Package_TO_SOT_SMD:SOT-89-3', note: 'Tab on pin 2 provides some heatsinking. BC857CLT1G.' },
+      { test: '1–3A, medium power', package: 'SOT-223  (6.5×3.5mm + tab)', kiCad: 'Package_TO_SOT_SMD:SOT-223-3_TabPin2', note: 'Large exposed tab = thermal path. Solder tab to copper pour.' },
+      { test: '3–5A, medium-high power', package: 'DPAK / TO-252  (6.6×6.1mm)', kiCad: 'Package_TO_SOT_SMD:TO-252-3_TabPin2', note: 'Good thermal path. IRF530S, IRFR120. Tab = drain typically.' },
+      { test: '5–30A, high power SMD ★', package: 'D2PAK / TO-263  (10×8.7mm)', kiCad: 'Package_TO_SOT_SMD:TO-263-3_TabPin2', note: 'Large tab. Multiple vias to GND plane. IRF3710S.' },
+      { test: '> 10A, ultra-low Rds — compact', package: 'PowerPAK SO-8 / LFPAK56', kiCad: 'Package_SO:SOIC-8_EP_3.9x4.9mm_P1.27mm_EP2.29x1.65mm', note: 'Used in phone/laptop chargers. CSD17556Q5B. Very low Rds_on.' },
+      { test: '> 20A, dual MOSFET one package', package: 'DirectFET / TOLL / TO-Leadless', kiCad: 'Package_TO_SOT_SMD:TO-Leadless_7.0x6.0mm', note: 'e.g. IPG20N10S4. Flip-chip on copper slug. Max thermal performance.' },
+      { test: 'GaN MOSFET (high freq, > 100V)', package: 'GaN module / custom', kiCad: '— (use manufacturer footprint)', note: 'GaN Systems GS61008P. Custom PCB footprint from datasheet.' },
+      { test: 'Dual BJT — NPN+PNP pair', package: 'SOT-363 / SC-70-6', kiCad: 'Package_TO_SOT_SMD:SOT-363', note: 'BCM856DS. Dual matched pair. Six-pin SC-70 footprint.' },
+    ],
+    tht: [
+      { test: 'Small signal BJT/MOSFET — prototype', package: 'TO-92  (3-pin, flat-face)', kiCad: 'Package_TO_SOT_THT:TO-92_Inline', note: '2N3904, 2N2222, BS170. Flat face identifies orientation.' },
+      { test: 'Medium signal < 1W — larger body', package: 'TO-92L', kiCad: 'Package_TO_SOT_THT:TO-92L_Inline', note: 'Slightly higher Pd than standard TO-92.' },
+      { test: 'Medium power with tab < 50W', package: 'TO-220  (3-pin + exposed tab)', kiCad: 'Package_TO_SOT_THT:TO-220-3_Vertical', note: 'Bolt tab to heatsink. IRF540N, TIP31C, BD139.' },
+      { test: 'Isolated tab — shared heatsink', package: 'TO-220F  (full-pack isolated tab)', kiCad: 'Package_TO_SOT_THT:TO-220F-3_Vertical', note: 'Tab isolated from circuit. Safe on shared heatsink.' },
+      { test: 'High power > 50W', package: 'TO-247  (3-pin, large)', kiCad: 'Package_TO_SOT_THT:TO-247-3_Vertical', note: 'IRFP460, IRFP150N. Larger than TO-220 for lower Rth.' },
+      { test: 'Very high power > 200W', package: 'TO-264 / TO-3P', kiCad: 'Package_TO_SOT_THT:TO-3P-3_Vertical', note: 'Large module package. Bolt to massive heatsink.' },
+    ],
+    voltage: 'Logic-level MOSFETs: Vgs_th < 2.5V → driven by 3.3V MCU directly. Standard MOSFETs: Vgs_th 4–10V → need gate driver or 5–12V drive. Always check Vgs_th in datasheet.',
+    example: 'LED PWM at 12V/200mA: P=0.04×0.5Ω=20mW → SOT-23 (2N7002). Motor driver 12V/5A: P=25×0.05=1.25W → DPAK (IRFR024N). Linear reg heatsunk: TO-220 (LM7805). Each needs its own footprint.',
+  },
+  {
+    type: 'IC / Microcontroller',
+    symbol: 'U',
+    color: 'var(--accent)',
+    icon: '▢',
+    concept: `For ICs, the **part number suffix encodes the package** — you cannot choose footprint independently of the IC variant you order. STM32F103C8**T6** = LQFP-48; **U6** = QFN-48. Same chip, different footprint, different pin assignment.\n\nMany ICs offer DIP (THT, breadboard-friendly), SOIC (SMD, easy solder), TSSOP (smaller), LQFP/QFN (compact). Each is a different purchase, different footprint.`,
+    chooseSMD: 'All production boards. SOIC-8 = hand-solderable. LQFP = reflow/hot air. QFN/BGA = oven only.',
+    chooseTHT: 'DIP only for prototyping. Very few modern ICs still come in DIP — check availability first.',
+    smd: [
+      { test: '5–8 pins — tiny logic, comparators', package: 'SOT-23-5 / SOT-23-6', kiCad: 'Package_TO_SOT_SMD:SOT-23-5', note: 'MCP6001 op-amp in SOT-23-5. TPS61023 in SOT-23-6. Very small.' },
+      { test: '≤ 8 pins — op-amps, reg, timer ★', package: 'SOIC-8  (3.9×4.9mm P1.27mm)', kiCad: 'Package_SO:SOIC-8_3.9x4.9mm_P1.27mm', note: 'Best hand-solderable SMD IC package. LM358, NE555, MCP2515.' },
+      { test: '≤ 8 pins — power IC with pad', package: 'SOIC-8 EP (exposed pad)', kiCad: 'Package_SO:SOIC-8_EP_3.9x4.9mm_P1.27mm_EP2.29x1.65mm', note: 'Thermal pad on bottom. Common for gate drivers, LDOs.' },
+      { test: '8 pins — compact (vs SOIC)', package: 'MSOP-8  (3.0×3.0mm P0.65mm)', kiCad: 'Package_SO:MSOP-8_3x3mm_P0.65mm', note: 'Smaller than SOIC-8. Harder to hand-solder (0.65mm pitch).' },
+      { test: '8–16 pins — medium ICs', package: 'SOIC-14 / SOIC-16  (P1.27mm)', kiCad: 'Package_SO:SOIC-16_3.9x9.9mm_P1.27mm', note: '74HC logic chips. Easy to hand-solder. Long narrow body.' },
+      { test: '8–24 pins — compact medium ICs', package: 'TSSOP-8/14/16/20  (P0.65mm)', kiCad: 'Package_SO:TSSOP-8_3x3mm_P0.65mm', note: 'Half the width of SOIC. Harder to hand-solder. MCP23017 in SSOP-28.' },
+      { test: '16–28 pins — wider ICs', package: 'SOIC-20 / SOIC-24 / SOIC-28', kiCad: 'Package_SO:SOIC-28_7.5x17.9mm_P1.27mm', note: 'Still 1.27mm pitch — manageable by hand with flux.' },
+      { test: '20–44 pins — MCUs ★', package: 'LQFP-32/44  (7×7mm P0.8mm)', kiCad: 'Package_QFP:LQFP-32_7x7mm_P0.8mm', note: '0.8mm pitch — solderable with hot air + flux. STM32G031.' },
+      { test: '48–64 pins — common MCU ★', package: 'LQFP-48/64  (7×7mm P0.5mm)', kiCad: 'Package_QFP:LQFP-48_7x7mm_P0.5mm', note: '0.5mm pitch. Hot air + flux. STM32F103C8T6 (LQFP-48).' },
+      { test: '80–100 pins — MCU/FPGA', package: 'LQFP-100  (14×14mm P0.5mm)', kiCad: 'Package_QFP:LQFP-100_14x14mm_P0.5mm', note: 'Reflow preferred at this size. Still doable with hot air + paste.' },
+      { test: '128–144 pins — high pin count', package: 'LQFP-144  (20×20mm P0.5mm)', kiCad: 'Package_QFP:LQFP-144_20x20mm_P0.5mm', note: 'Reflow only for reliability. STM32F4 series.' },
+      { test: 'Any pin count — compact footprint', package: 'QFN  (exposed pad, no leads)', kiCad: 'Package_DFN_QFN:QFN-32_5x5mm_P0.5mm', note: 'Smallest footprint. Exposed pad = thermal + GND. Oven required.' },
+      { test: 'High I/O count — FPGA / complex SoC', package: 'BGA  (ball grid array)', kiCad: 'Package_BGA:BGA-256_17x17mm_Layout16x16_P1.0mm', note: 'Balls underneath — X-ray inspection needed. Professional production.' },
+      { test: 'Wireless SoC (ESP32, nRF52)', package: 'Module (stamp / castellated)', kiCad: '(use module-specific footprint)', note: 'ESP32-S3-WROOM. Castellated pads. Solderable by hand on edges.' },
+    ],
+    tht: [
+      { test: '8 pins — op-amp, timer, ATtiny', package: 'DIP-8  (W7.62mm P2.54mm)', kiCad: 'Package_DIP:DIP-8_W7.62mm', note: 'Breadboard-compatible. LM358, NE555, ATtiny85.' },
+      { test: '14–16 pins — logic ICs (74HC)', package: 'DIP-14 / DIP-16  (W7.62mm)', kiCad: 'Package_DIP:DIP-14_W7.62mm', note: '74HC00, 74HC595. Standard 7.62mm body width.' },
+      { test: '18–28 pins — MCUs', package: 'DIP-18/20/28  (W7.62mm or W15.24mm)', kiCad: 'Package_DIP:DIP-28_W7.62mm', note: 'ATmega328P-PU = DIP-28 narrow (W7.62mm).' },
+      { test: '40 pins — classic MCU', package: 'DIP-40  (W15.24mm P2.54mm)', kiCad: 'Package_DIP:DIP-40_W15.24mm', note: 'ATmega16/32 in DIP-40. Wide body — P15.24mm.' },
+      { test: 'Always use a socket for DIP', package: 'DIP socket (same footprint)', kiCad: '(same DIP footprint)', note: 'IC socket allows replacement. Add DIP socket to BOM. Low cost.' },
+    ],
+    voltage: 'Part suffix → package: STM32 T6=LQFP, U6=QFN. TI -N=DIP, -D=SOIC, -PW=TSSOP, -RGZ=QFN. Microchip -P=DIP, -SO=SOIC, -SS=SSOP, -MV=QFN. Confirm in datasheet "Ordering Info" table.',
+    example: 'ATmega328P: prototype → DIP-28 (breadboard). Final PCB → TQFP-32 (Package_QFP:TQFP-32_7x7mm_P0.8mm) — different part suffix, smaller board area. NE555: prototype DIP-8, PCB → SOIC-8 (order NE555D).',
+  },
+]
+
+// ── Visual size comparison SVG ─────────────────────────────────────
+
+const PACKAGE_SIZES = [
+  { name:'0201', w:0.6, h:0.3, color:'var(--accent)' },
+  { name:'0402', w:1.0, h:0.5, color:'var(--accent)' },
+  { name:'0603', w:1.6, h:0.8, color:'var(--accent2)' },
+  { name:'0805', w:2.0, h:1.2, color:'var(--accent2)' },
+  { name:'1206', w:3.2, h:1.6, color:'var(--accent3)' },
+  { name:'1210', w:3.2, h:2.5, color:'var(--accent3)' },
+  { name:'2512', w:6.3, h:3.2, color:'var(--accent4)' },
+]
+
+function PackageSizeChart() {
+  const [hover, setHover] = useState(null)
+  const scale = 18  // px per mm
+  const maxW = 7 * scale
+  const maxH = 4 * scale
+  const totalW = PACKAGE_SIZES.reduce((s,p) => s + p.w * scale + 18, 0) + 20
+
+  return (
+    <div style={{ background:'var(--bg3)', borderRadius:'2px', padding:'16px', overflowX:'auto' }}>
+      <div style={{ fontFamily:'var(--mono)', fontSize:'10px', color:'var(--text-dim)', letterSpacing:'2px', textTransform:'uppercase', marginBottom:'12px' }}>
+        Passive Package Sizes — Actual Scale (mm)
+      </div>
+      <svg viewBox={`0 0 ${totalW} ${maxH + 32}`} style={{ width:'100%', maxWidth: totalW, display:'block' }}>
+        {(() => {
+          let cx = 10
+          return PACKAGE_SIZES.map((p, i) => {
+            const pw = p.w * scale
+            const ph = p.h * scale
+            const py = maxH - ph
+            const isHov = hover === i
+            const el = (
+              <g key={p.name} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}
+                style={{ cursor:'pointer' }}>
+                <rect x={cx} y={py} width={pw} height={ph}
+                  fill={isHov ? p.color : `color-mix(in srgb, ${p.color} 30%, var(--panel))`}
+                  stroke={p.color} strokeWidth={isHov ? 1.5 : 0.8}
+                  rx={1} style={{ transition:'fill 0.15s' }} />
+                <text x={cx + pw/2} y={maxH + 14} textAnchor="middle"
+                  fontFamily="monospace" fontSize="8" fill={isHov ? p.color : 'var(--text-dim)'}>{p.name}</text>
+                <text x={cx + pw/2} y={maxH + 24} textAnchor="middle"
+                  fontFamily="monospace" fontSize="7" fill="var(--text-dim)">{p.w}×{p.h}</text>
+              </g>
+            )
+            cx += pw + 18
+            return el
+          })
+        })()}
+      </svg>
+      <div style={{ fontFamily:'var(--mono)', fontSize:'11px', color:'var(--text-dim)', marginTop:'8px' }}>
+        ← Hover a package to highlight. Drawn at true relative scale. Human hair ≈ 0.07mm.
+      </div>
+    </div>
+  )
+}
+
+// ── Main footprint picker view ─────────────────────────────────────
+
+function FootprintPicker() {
   const [selected, setSelected] = useState(0)
+  const [formFactor, setFormFactor] = useState('both') // 'smd' | 'tht' | 'both'
+  const rule = FOOTPRINT_RULES[selected]
+
+  const renderConcept = (text) => text.split('\n').map((line, i) => {
+    if (!line.trim()) return <div key={i} style={{ height:'6px' }} />
+    const parts = line.split(/\*\*(.*?)\*\*/g)
+    return (
+      <div key={i} style={{ fontSize:'13px', color:'var(--text)', lineHeight:1.8 }}>
+        {parts.map((p, j) => j%2===1
+          ? <strong key={j} style={{ color:'var(--text-bright)', fontWeight:600 }}>{p}</strong>
+          : p)}
+      </div>
+    )
+  })
+
+  const RuleTable = ({ rows, type }) => {
+    const smdColor = 'var(--accent)'
+    const thtColor = 'var(--accent3)'
+    const col = type === 'SMD' ? smdColor : thtColor
+    return (
+      <div style={{ background:'var(--panel)', border:`1px solid var(--border)`, borderTop:`2px solid ${col}`, borderRadius:'2px', padding:'14px 16px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px' }}>
+          <span style={{ fontFamily:'var(--mono)', fontSize:'10px', letterSpacing:'2px', textTransform:'uppercase', color:col }}>{type}</span>
+          {type === 'SMD'
+            ? <span style={{ fontSize:'10px', color:'var(--text-dim)' }}>— chip/surface-mount, production</span>
+            : <span style={{ fontSize:'10px', color:'var(--text-dim)' }}>— through-hole, prototyping</span>}
+        </div>
+        {rows.map((r, i) => (
+          <div key={i} style={{ padding:'8px 0', borderBottom: i<rows.length-1 ? '1px solid var(--border)':'none' }}>
+            <div style={{ fontFamily:'var(--mono)', fontSize:'10px', color:'var(--text-dim)', marginBottom:'3px' }}>{r.test}</div>
+            <div style={{ display:'flex', alignItems:'flex-start', gap:'10px', flexWrap:'wrap' }}>
+              <span style={{ fontFamily:'var(--mono)', fontSize:'12px', fontWeight:700, color:col, flexShrink:0 }}>{r.package}</span>
+              {r.kiCad !== '—' && (
+                <span style={{ fontFamily:'var(--mono)', fontSize:'10px', color:'var(--accent3)', background:'var(--bg3)', padding:'2px 7px', borderRadius:'2px', flexShrink:0 }}>{r.kiCad}</span>
+              )}
+            </div>
+            <div style={{ fontSize:'11px', color:'var(--text-dim)', marginTop:'3px', lineHeight:1.5 }}>{r.note}</div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {/* Key concept banner */}
+      <div style={{ background:'color-mix(in srgb, var(--accent) 6%, var(--panel))', border:'1px solid color-mix(in srgb, var(--accent) 20%, var(--border))', borderLeft:'3px solid var(--accent)', borderRadius:'2px', padding:'14px 18px', marginBottom:'16px', fontSize:'13px', color:'var(--text)', lineHeight:1.8 }}>
+        <strong style={{ color:'var(--accent)' }}>The rule beginners miss:</strong> The same component value exists in both SMD and THT packages.
+        A 100nF capacitor can be an SMD 0402 chip <em>or</em> a THT ceramic disc — same value, completely different footprints.
+        Choosing is about your <strong style={{ color:'var(--text-bright)' }}>assembly method</strong> and <strong style={{ color:'var(--text-bright)' }}>power/voltage rating</strong>, not the value.
+      </div>
+
+      {/* SMD vs THT decision guide */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', marginBottom:'16px' }}>
+        {[
+          { label:'SMD — Surface Mount', color:'var(--accent)', items:['Production PCB, automated assembly','Compact boards — smaller footprint','Lower cost at volume','Reflow oven or hot air required','Better electrical performance at high frequency'] },
+          { label:'THT — Through-Hole', color:'var(--accent3)', items:['Prototyping, breadboard, perfboard','Beginner-friendly — easy to hand-solder','Easy to replace / rework by hand','Higher mechanical strength (great for connectors)','DIP ICs: use a socket for easy swapping'] },
+        ].map(g => (
+          <div key={g.label} style={{ background:'var(--panel)', border:`1px solid color-mix(in srgb, ${g.color} 25%, var(--border))`, borderLeft:`3px solid ${g.color}`, borderRadius:'2px', padding:'12px 14px' }}>
+            <div style={{ fontFamily:'var(--mono)', fontSize:'10px', color:g.color, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'8px' }}>{g.label}</div>
+            {g.items.map((it,i) => (
+              <div key={i} style={{ display:'flex', gap:'8px', fontSize:'12px', color:'var(--text)', padding:'3px 0', lineHeight:1.5 }}>
+                <span style={{ color:g.color, flexShrink:0 }}>→</span>{it}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      <PackageSizeChart />
+
+      <div style={{ display:'grid', gridTemplateColumns:'190px 1fr', gap:'16px', marginTop:'20px', alignItems:'start' }}>
+        {/* Component type list */}
+        <div style={{ display:'flex', flexDirection:'column', gap:'4px' }}>
+          {FOOTPRINT_RULES.map((r,i) => (
+            <button key={i} onClick={() => setSelected(i)} style={{
+              textAlign:'left', padding:'9px 12px',
+              background: selected===i ? 'var(--hover-bg)':'var(--panel)',
+              border:`1px solid ${selected===i ? 'var(--hover-border)':'var(--border)'}`,
+              borderLeft:`3px solid ${selected===i ? r.color:'transparent'}`,
+              borderRadius:'2px', cursor:'pointer', transition:'all 0.15s',
+            }}>
+              <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                <span style={{ fontFamily:'var(--mono)', fontSize:'11px', color:r.color }}>{r.icon}</span>
+                <span style={{ fontFamily:'var(--mono)', fontSize:'11px', color: selected===i ? 'var(--text-bright)':'var(--text)' }}>{r.type}</span>
+              </div>
+            </button>
+          ))}
+
+          {/* Form factor filter */}
+          <div style={{ marginTop:'12px', borderTop:'1px solid var(--border)', paddingTop:'12px' }}>
+            <div style={{ fontFamily:'var(--mono)', fontSize:'10px', color:'var(--text-dim)', letterSpacing:'1.5px', textTransform:'uppercase', marginBottom:'6px' }}>Show</div>
+            {[['both','SMD + THT'],['smd','SMD only'],['tht','THT only']].map(([v,lbl]) => (
+              <button key={v} onClick={() => setFormFactor(v)} style={{
+                display:'block', width:'100%', textAlign:'left', fontFamily:'var(--mono)', fontSize:'10px',
+                padding:'5px 10px', marginBottom:'3px', borderRadius:'2px', cursor:'pointer',
+                border:`1px solid ${formFactor===v ? 'var(--accent)':'var(--border)'}`,
+                background: formFactor===v ? 'var(--tab-active-bg)':'var(--bg3)',
+                color: formFactor===v ? 'var(--accent)':'var(--text-dim)',
+              }}>{lbl}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Detail panel */}
+        {rule && (
+          <div>
+            {/* Concept */}
+            <div style={{ background:'var(--panel)', border:`1px solid var(--border)`, borderTop:`3px solid ${rule.color}`, borderRadius:'2px', padding:'16px 20px', marginBottom:'10px' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'10px' }}>
+                <span style={{ fontFamily:'var(--mono)', fontSize:'22px', color:rule.color }}>{rule.icon}</span>
+                <div style={{ fontFamily:'var(--cond)', fontSize:'20px', fontWeight:700, color:'var(--text-bright)' }}>{rule.type}</div>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>{renderConcept(rule.concept)}</div>
+            </div>
+
+            {/* When to pick SMD vs THT */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', marginBottom:'10px' }}>
+              {[
+                { label:'Use SMD when', color:'var(--accent)', text: rule.chooseSMD },
+                { label:'Use THT when', color:'var(--accent3)', text: rule.chooseTHT },
+              ].map(g => (
+                <div key={g.label} style={{ background:'var(--bg3)', border:`1px solid color-mix(in srgb, ${g.color} 20%, var(--border))`, borderLeft:`3px solid ${g.color}`, borderRadius:'2px', padding:'10px 14px' }}>
+                  <div style={{ fontFamily:'var(--mono)', fontSize:'10px', color:g.color, letterSpacing:'1.5px', textTransform:'uppercase', marginBottom:'5px' }}>{g.label}</div>
+                  <div style={{ fontSize:'12px', color:'var(--text)', lineHeight:1.6 }}>{g.text}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Rule tables — SMD and/or THT */}
+            <div style={{ display:'grid', gridTemplateColumns: formFactor === 'both' ? '1fr 1fr' : '1fr', gap:'10px', marginBottom:'10px' }}>
+              {(formFactor === 'smd' || formFactor === 'both') && rule.smd && <RuleTable rows={rule.smd} type="SMD" />}
+              {(formFactor === 'tht' || formFactor === 'both') && rule.tht && <RuleTable rows={rule.tht} type="THT" />}
+            </div>
+
+            {/* Voltage note */}
+            <div style={{ background:'color-mix(in srgb, var(--accent4) 6%, var(--panel))', border:'1px solid color-mix(in srgb, var(--accent4) 20%, var(--border))', borderLeft:'3px solid var(--accent4)', borderRadius:'2px', padding:'11px 15px', marginBottom:'8px' }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:'10px', color:'var(--accent4)', letterSpacing:'2px', textTransform:'uppercase', marginBottom:'5px' }}>⚠ Voltage / Rating</div>
+              <p style={{ fontSize:'13px', color:'var(--text)', lineHeight:1.7, margin:0 }}>{rule.voltage}</p>
+            </div>
+
+            {/* Worked example */}
+            <div style={{ background:'color-mix(in srgb, var(--accent3) 5%, var(--panel))', border:'1px solid color-mix(in srgb, var(--accent3) 20%, var(--border))', borderLeft:'3px solid var(--accent3)', borderRadius:'2px', padding:'11px 15px' }}>
+              <div style={{ fontFamily:'var(--mono)', fontSize:'10px', color:'var(--accent3)', letterSpacing:'2px', textTransform:'uppercase', marginBottom:'5px' }}>✓ Worked Example</div>
+              <p style={{ fontFamily:'var(--mono)', fontSize:'12px', color:'var(--text)', lineHeight:1.8, margin:0 }}>{rule.example}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COMBINED EXPORT
+// ─────────────────────────────────────────────────────────────────
+
+const TOP_TABS = [
+  { id:'encyclopedia', label:'Component Encyclopedia' },
+  { id:'footprints',   label:'Value → Footprint'      },
+]
+
+export default function ComponentEncyclopedia() {
+  const [topTab,    setTopTab]    = useState('encyclopedia')
+  const [category,  setCategory]  = useState('Passives')
+  const [selected,  setSelected]  = useState(0)
 
   const filtered = COMPONENTS.filter(c => c.category === category)
   const comp = filtered[Math.min(selected, filtered.length - 1)]
@@ -301,11 +790,32 @@ export default function ComponentEncyclopedia() {
 
   return (
     <div className="fade-in">
-      <div className="section-title">Component Encyclopedia</div>
+      <div className="section-title">Components</div>
       <p className="section-desc">
-        What each component does, when to use it, how to pick the right one, and what footprint to use in KiCad.
+        Reference guide for every common component — what it does, how to pick it, and how value/rating maps to the KiCad footprint.
       </p>
 
+      {/* Top-level view switcher */}
+      <div style={{ display:'flex', gap:'4px', marginBottom:'28px', borderBottom:'1px solid var(--border)' }}>
+        {TOP_TABS.map(t => (
+          <button key={t.id} onClick={() => setTopTab(t.id)} style={{
+            fontFamily:'var(--mono)', fontSize:'11px', letterSpacing:'1.5px', textTransform:'uppercase',
+            padding:'10px 18px', border:'none', background:'transparent', cursor:'pointer',
+            color: topTab===t.id ? 'var(--accent2)' : 'var(--text-dim)',
+            borderBottom: topTab===t.id ? '2px solid var(--accent2)' : '2px solid transparent',
+            marginBottom:'-1px', transition:'color 0.15s',
+          }}
+          onMouseEnter={e => { if(topTab!==t.id) e.currentTarget.style.color='var(--hover-text)' }}
+          onMouseLeave={e => { if(topTab!==t.id) e.currentTarget.style.color='var(--text-dim)' }}
+          >{t.label}</button>
+        ))}
+      </div>
+
+      {/* ── Value → Footprint view ───────────────────────────── */}
+      {topTab === 'footprints' && <FootprintPicker />}
+
+      {/* ── Encyclopedia view ────────────────────────────────── */}
+      {topTab === 'encyclopedia' && <>
       {/* Category tabs */}
       <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '24px', borderBottom: '1px solid var(--border)' }}>
         {CATEGORIES.map(cat => (
@@ -394,6 +904,7 @@ export default function ComponentEncyclopedia() {
           </div>
         )}
       </div>
+      </>}
     </div>
   )
 }
