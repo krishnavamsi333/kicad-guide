@@ -1,4 +1,9 @@
 import { useState } from 'react'
+import tvsSymbol from '../assets/tvs-symbols.png'
+import tvsPlacement from '../assets/tvs-placement-esd.png'
+import tvsConnection from '../assets/tvs-connection.png'
+import tvsDataLines from '../assets/tvs-data-lines.png'
+import tvsCurrent from '../assets/tvs-current.png'
 
 const CATEGORIES = ['Passives', 'Semiconductors', 'ICs & Modules', 'Connectors', 'Electromechanical']
 
@@ -102,6 +107,177 @@ const COMPONENTS = [
     footprints: ['SOD-123 (SMD, most common)', 'SOD-323 (smaller)', '1N4xxx (THT, DO-41)'],
     gotchas: 'Mark polarity clearly on silkscreen — the cathode stripe on the component must match the bar on your footprint. Schottky diodes have higher leakage current; avoid in precision circuits.',
     packages: 'SOD-123, SOD-323, DO-41 (THT)',
+  },
+  {
+    category: 'Semiconductors',
+    name: 'TVS Diode (Transient Voltage Suppressor)',
+    symbol: 'D (TVS)',
+    color: 'var(--accent3)',
+    icon: '🛡️',
+
+    images: [
+      { src: tvsSymbol, label: 'TVS diode symbols' },
+      { src: tvsConnection, label: 'Typical TVS connection' },
+      { src: tvsPlacement, label: 'Correct placement near connector' },
+      { src: tvsDataLines, label: 'TVS protection on data lines' },
+      { src: tvsCurrent, label: 'Current flow during surge' },
+    ],
+    oneLiner: 'Ultra-fast protection device that clamps voltage spikes and protects circuits from ESD, surges, and transients.',
+
+    what: `A TVS (Transient Voltage Suppressor) diode is a protection device that operates in avalanche breakdown. 
+  When voltage exceeds its breakdown threshold, it rapidly switches to a low-impedance state and diverts surge current to ground, clamping the voltage to a safe level.
+
+  It reacts extremely fast (picoseconds to nanoseconds), making it ideal for protecting sensitive electronics from:
+  - Electrostatic Discharge (ESD)
+  - Inductive switching spikes (back-EMF)
+  - Automotive load dump
+  - Lightning-induced transients`,
+
+    when: [
+      'Power input protection (battery, DC jack, USB)',
+      'Communication lines (CAN, UART, USB, I2C, Ethernet)',
+      'Motor drivers, relays, and inductive loads (back-EMF protection)',
+      'External connectors exposed to environment',
+      'ESD protection for GPIO and sensor inputs',
+      'Automotive systems (load dump and battery transients)',
+    ],
+
+    types: [
+      'Unidirectional (DC power rails)',
+      'Bidirectional (AC or differential signals)',
+      'TVS diode arrays (multi-line ESD protection)',
+    ],
+
+    picking: `
+  KEY PARAMETERS (CRITICAL):
+
+  - VRWM (Stand-off Voltage):
+    Normal operating voltage → TVS remains OFF
+
+  - VBR (Breakdown Voltage):
+    Voltage where TVS starts conducting
+
+  - VC (Clamping Voltage):
+    Maximum voltage seen by circuit during surge
+    MUST be lower than IC absolute max rating
+
+  - IPP (Peak Pulse Current):
+    Maximum surge current capability
+
+  - PPP (Peak Pulse Power):
+    Energy absorption capability (e.g., 600W, 1500W)
+
+  - Capacitance:
+    Low (<5pF) required for high-speed signals (USB, CAN)
+
+  DESIGN RULE:
+  VRWM ≥ Vsystem
+  VC < IC maximum rating
+  `,
+
+    footprints: [
+      'SOD-323 (ESD / signal lines)',
+      'SOD-123 (general purpose)',
+      'SMA (DO-214AC)',
+      'SMBJ (DO-214AA)',
+      'SMC (DO-214AB high power)',
+    ],
+
+    packages: 'SOD-323, SOD-123, SMA, SMBJ, SMC',
+
+    placement: `
+  CRITICAL PCB DESIGN RULES:
+
+  1. TVS must be FIRST component after connector
+  2. Place VERY CLOSE to entry point
+  3. Keep trace length extremely SHORT (minimize inductance)
+  4. Provide LOW-IMPEDANCE path to ground
+  5. Place BEFORE sensitive ICs (Connector → TVS → Circuit)
+  6. Avoid vias in surge path if possible
+  7. Use wide traces for surge current
+
+  Correct:
+  Connector → TVS → Circuit
+
+  Wrong:
+  Connector → Circuit → TVS
+  `,
+
+    layoutTips: [
+      'Minimize loop area to reduce parasitic inductance',
+      'Use solid ground plane for fast current return',
+      'Place ground via very close to TVS diode',
+      'Avoid routing protected and unprotected traces together',
+      'Place TVS before filters and ICs',
+    ],
+
+    behavior: `
+  NORMAL CONDITION:
+  - TVS is OFF (high impedance)
+  - No current flows
+
+  SURGE CONDITION:
+  - Voltage exceeds breakdown
+  - TVS turns ON instantly
+  - Clamps voltage and diverts current to ground
+  `,
+
+    designInsight: `
+  TVS performance depends more on PCB layout than the component itself.
+
+  Long traces increase inductance → higher voltage spike → reduced protection.
+
+  Even a perfect TVS diode will fail if placed far from the connector.
+
+  Key idea:
+  Protection = placement + grounding + component
+  `,
+
+    comparison: `
+  TVS vs Other Protection Devices:
+
+  TVS:
+  - Extremely fast (ps response)
+  - Low energy handling
+  - Best for electronics protection
+
+  MOV:
+  - Slower response
+  - Higher energy absorption
+  - Used in mains protection
+
+  GDT:
+  - Very slow
+  - Very high energy capability
+  - Used for lightning protection
+
+  Best practice:
+  Use TVS + MOV combination for robust systems
+  `,
+
+    gotchas: `
+  - Wrong voltage selection → no protection
+  - Long PCB traces → reduced effectiveness
+  - Poor grounding → surge not diverted
+  - High capacitance → signal distortion (USB/CAN)
+  - Overstress → TVS failure (short/open)
+  `,
+
+    example: `
+  EXAMPLE 1: 24V System
+  - VRWM: ~26–30V
+  - VC: < 40V
+  - Package: SMBJ / SMC
+
+  EXAMPLE 2: USB 5V Line
+  - Use low-capacitance TVS (<5pF)
+  - Package: SOD-323
+  - Type: ESD diode array
+
+  EXAMPLE 3: CAN Bus
+  - Use bidirectional TVS
+  - Low capacitance required
+  `,
   },
   {
     category: 'Semiconductors',
@@ -767,6 +943,53 @@ function FootprintPicker() {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// ImageGallery Component
+// ─────────────────────────────────────────────────────────────────
+
+function ImageGallery({ images, color }) {
+  const [selectedImage, setSelectedImage] = useState(0)
+  
+  if (!images || images.length === 0) return null
+  
+  return (
+    <div style={{ background: 'var(--panel)', border: `1px solid var(--border)`, borderRadius: '2px', padding: '16px 20px', marginBottom: '10px' }}>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase', color, marginBottom: '10px' }}>
+        📷 Reference Images
+      </div>
+      <div style={{ background: 'var(--bg3)', borderRadius: '2px', padding: '16px', textAlign: 'center', marginBottom: '12px' }}>
+        <img src={images[selectedImage].src} alt={images[selectedImage].label} style={{ maxWidth: '100%', maxHeight: '300px', objectFit: 'contain', borderRadius: '2px' }} />
+        <div style={{ fontSize: '11px', color: 'var(--text-dim)', marginTop: '8px' }}>{images[selectedImage].label}</div>
+      </div>
+      {images.length > 1 && (
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
+          {images.map((img, idx) => (
+            <button key={idx} onClick={() => setSelectedImage(idx)} style={{ 
+              border: idx === selectedImage ? `2px solid ${color}` : '1px solid var(--border)', 
+              borderRadius: '2px', padding: '4px', background: 'var(--bg2)', cursor: 'pointer', flexShrink: 0 
+            }}>
+              <img src={img.src} alt={img.label} style={{ width: '60px', height: '45px', objectFit: 'cover', borderRadius: '1px' }} />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Section Component
+// ─────────────────────────────────────────────────────────────────
+
+function Section({ title, color, children }) {
+  return (
+    <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '2px', padding: '16px 20px', marginBottom: '10px' }}>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase', color, marginBottom: '10px' }}>{title}</div>
+      {children}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────
 // COMBINED EXPORT
 // ─────────────────────────────────────────────────────────────────
 
@@ -872,6 +1095,106 @@ export default function ComponentEncyclopedia() {
               <p style={{ fontSize: '13px', color: 'var(--text)', lineHeight: 1.8 }}>{comp.what}</p>
             </Section>
 
+            {/* TVS Images - only for TVS diode */}
+            {comp.images && <ImageGallery images={comp.images} color={comp.color} />}
+
+            {/* TVS Types */}
+            {comp.types && (
+              <Section title="Types" color={comp.color}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {comp.types.map((type, i) => (
+                    <span key={i} style={{
+                      background: 'color-mix(in srgb, var(--accent3) 15%, var(--bg3))',
+                      padding: '4px 10px',
+                      borderRadius: '2px',
+                      fontSize: '12px',
+                      fontFamily: 'var(--mono)',
+                      color: 'var(--accent3)'
+                    }}>{type}</span>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {/* TVS Placement */}
+            {comp.placement && (
+              <Section title="PCB Placement Rules (Critical!)" color={comp.color}>
+                <pre style={{
+                  fontFamily: 'var(--mono)',
+                  fontSize: '11px',
+                  background: 'var(--bg3)',
+                  padding: '12px',
+                  borderRadius: '2px',
+                  overflowX: 'auto',
+                  color: 'var(--text)',
+                  lineHeight: 1.6,
+                  margin: 0
+                }}>{comp.placement}</pre>
+              </Section>
+            )}
+
+            {/* TVS Layout Tips */}
+            {comp.layoutTips && (
+              <Section title="Layout Tips" color={comp.color}>
+                {comp.layoutTips.map((tip, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '13px', padding: '4px 0' }}>
+                    <span style={{ color: comp.color }}>•</span>
+                    <span style={{ color: 'var(--text)' }}>{tip}</span>
+                  </div>
+                ))}
+              </Section>
+            )}
+
+            {/* TVS Behavior */}
+            {comp.behavior && (
+              <Section title="How it works" color={comp.color}>
+                <pre style={{
+                  fontFamily: 'var(--mono)',
+                  fontSize: '11px',
+                  background: 'var(--bg3)',
+                  padding: '12px',
+                  borderRadius: '2px',
+                  color: 'var(--text)',
+                  lineHeight: 1.6,
+                  margin: 0
+                }}>{comp.behavior}</pre>
+              </Section>
+            )}
+
+            {/* TVS Design Insight */}
+            {comp.designInsight && (
+              <div style={{
+                background: 'color-mix(in srgb, var(--accent) 6%, var(--panel))',
+                border: `1px solid color-mix(in srgb, var(--accent) 20%, var(--border))`,
+                borderLeft: `3px solid var(--accent)`,
+                borderRadius: '2px',
+                padding: '14px 18px',
+                marginBottom: '10px'
+              }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '8px' }}>
+                  💡 Design Insight
+                </div>
+                <p style={{ fontSize: '13px', color: 'var(--text)', lineHeight: 1.7, margin: 0 }}>{comp.designInsight}</p>
+              </div>
+            )}
+
+            {/* TVS Comparison */}
+            {comp.comparison && (
+              <Section title="TVS vs Other Protection" color={comp.color}>
+                <pre style={{
+                  fontFamily: 'var(--mono)',
+                  fontSize: '11px',
+                  background: 'var(--bg3)',
+                  padding: '12px',
+                  borderRadius: '2px',
+                  whiteSpace: 'pre-wrap',
+                  color: 'var(--text)',
+                  lineHeight: 1.6,
+                  margin: 0
+                }}>{comp.comparison}</pre>
+              </Section>
+            )}
+
             {/* When to use */}
             <Section title="When to use it" color={comp.color}>
               {comp.when.map((w, i) => (
@@ -905,15 +1228,6 @@ export default function ComponentEncyclopedia() {
         )}
       </div>
       </>}
-    </div>
-  )
-}
-
-function Section({ title, color, children }) {
-  return (
-    <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '2px', padding: '16px 20px', marginBottom: '10px' }}>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase', color, marginBottom: '10px' }}>{title}</div>
-      {children}
     </div>
   )
 }
