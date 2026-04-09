@@ -31,7 +31,7 @@ const TAB_GROUPS = [
       { id: 'checklist',   label: 'Checklist',    icon: '✓' },
       { id: 'calculators', label: 'Trace/Via',    icon: '⚡' },
       { id: 'impedance',   label: 'Impedance',    icon: '∿' },
-      { id: 'pwmbat',      label: 'PWM & Battery',icon: '◑' },
+      { id: 'pwmbat',      label: 'Electrical Calculators',icon: '◑' },
       { id: 'cost',        label: 'Cost Est.',    icon: '$' },
       { id: 'designtools', label: 'Design Tools', icon: '⌬' },
       { id: 'bus',         label: 'I²C/SPI/UART', icon: '↕' },
